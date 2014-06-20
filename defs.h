@@ -1,56 +1,72 @@
-/*------------------------------------------------------------------------------
-
-Copyright 2011 Armando J. Pinho (ap@ua.pt), All Rights Reserved.
-
-These programs are supplied free of charge for research purposes only,
-and may not be sold or incorporated into any commercial product. There is
-ABSOLUTELY NO WARRANTY of any sort, nor any undertaking that they are
-fit for ANY PURPOSE WHATSOEVER. Use them at your own risk. If you do
-happen to find a bug, or have modifications to suggest, please report
-the same to Armando J. Pinho, ap@ua.pt. The copyright notice above
-and this statement of conditions must remain an integral part of each
-and every copy made of these files.
-
-------------------------------------------------------------------------------*/
-
 #ifndef DEFS_H_INCLUDED
 #define DEFS_H_INCLUDED
 
-#pragma pack(1)
+#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#include <unistd.h>
 
-#define N_SYMBOLS 4
-
-typedef unsigned long long ULL;
-typedef unsigned char Symbol;
-typedef unsigned short ACCounter; /* Size of context counters for arrays */
-typedef unsigned char  HCCounter; /* Size of context counters for hash tables */
-typedef HCCounter HCCounters[N_SYMBOLS];
+typedef uint64_t ULL;
+typedef uint64_t U64;
+typedef uint32_t U32;
+typedef uint16_t U16;
+typedef uint8_t  U8;
+typedef int64_t  I64;
+typedef int32_t  I32;
+typedef int16_t  I16;
+typedef int8_t   I8;
 
 typedef struct
-	{
-	Symbol	*bases;
-	int	size;
-	int	unknowns;
-	int	convert;
-	}
-Sequence;
+  {
+  U32 ctx;
+  U32 den;
+  U32 ir;
+  U8  type;
+  }
+ModelPar;
 
-#define DEFAULT_PMODEL_ALPHA_NUM		1
-#define DEFAULT_PMODEL_ALPHA_DEN		1
-#define DEFAULT_PMODEL_MAX_COUNT		((1 << (sizeof(ACCounter) * 8)) - 1)
-/* If 0, never divide counters by maxCount */
+typedef struct
+  {
+  U8  help;
+  U8  verbose;
+  U8  force;
+  ModelPar *model;
+  char     *ref;
+  char     **tar;
+  U8  nTar;
+  U64 checksum;
+  U64 size;
+  U32 watermark;
+  double   gamma;
+  U32 nModels;
+  }
+Parameters;
 
-#define STORAGE_BITS_FILE_SIZE			32
-#define STORAGE_BITS_PMODEL_ALPHA_NUM		6
-#define STORAGE_BITS_PMODEL_ALPHA_DEN		6
-#define STORAGE_BITS_PMODEL_MAX_COUNT		30
-#define STORAGE_BITS_N_CMODELS			5
-#define STORAGE_BITS_TEMPLATE_SIZE		5
-#define STORAGE_BITS_TEMPLATE_POSITION		5
-#define STORAGE_BITS_INVERTED_REPEATS		1
-#define STORAGE_BITS_POWER_FUNCTION		1
-#define STORAGE_BITS_HSIZE			30
-#define STORAGE_BITS_GAMMA			16
+U32 garbage;
 
-#endif /* DEFS_H_INCLUDED */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#define BUFFER_SIZE            65535      
+#define PROGRESS_MIN           1000000
+#define DEFAULT_HELP           0
+#define DEFAULT_VERBOSE        0
+#define DEFAULT_FORCE          0
+#define MAX_CTX                31
+#define MIN_CTX                1
+#define MAX_DEN                1000000
+#define MIN_DEN                1
+#define BGUARD                 32
+#define DEFAULT_MAX_COUNT      ((1 << (sizeof(ACCounter) * 8)) - 1)
+#define MX_PMODEL              65535
+#define ALPHABET_SIZE          4
+#define CHECKSUMGF             1073741824
+#define WATERMARK              16042014
+#define DEFAULT_GAMMA          0.95
+#define MAX_HISTORYSIZE        1000000
+#define REFERENCE              1
+#define TARGET                 0
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#endif
 
