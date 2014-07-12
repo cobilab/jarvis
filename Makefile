@@ -1,43 +1,30 @@
-#ARITH_DIR = /home/x/public/DNA/arith
-ARITH_DIR = ../../../../../../src/arith
-ARITH_LIB = $(ARITH_DIR)/libArith.a
-BIN = .
-
-CC = gcc
-CFLAGS = -g -O3 -Wall -I$(ARITH_DIR) -fno-strict-aliasing
-LFLAGS = -L$(ARITH_DIR)
-
-LIBS = -lArith -lm
-DEPS = $(ARITH_LIB) defs.h
-
-PROGS = $(BIN)/DNAEncR1
-
-OBJS = mem.o template.o util.o fcm.o repeat.o
-
+#============================================================================#
+#                Jarvis 2014, IEETA/DETI, UNIVERSITY OF AVEIRO               #
+#============================================================================#
+BIN    = .
+CC     = gcc
+CPLP   = -ffast-math -msse2
+#-----------------------------------------------------------------------------
+CFLAGS = -O3 -Wall $(CPLP) -DPROGRESS
+#-----------------------------------------------------------------------------
+LIBS   = -lm
+DEPS   = defs.h
+PROGS  = $(BIN)/Jarvis
+OBJS   = bitio.o arith.o arith_aux.o
+#-----------------------------------------------------------------------------
 all:
-	cd $(ARITH_DIR); $(MAKE)
 	$(MAKE) progs
-
 progs: $(PROGS)
-
-$(BIN)/DNAEncR1: DNAEncR.c $(DEPS) $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $(BIN)/DNAEncR1 DNAEncR.c $(OBJS) $(LIBS)
-
-mem.o: mem.c mem.h $(DEPS)
-	$(CC) -c $(CFLAGS) mem.c
-
-common.o: common.c common.h $(DEPS)
-	$(CC) -c $(CFLAGS) common.c
-
-fcm.o: fcm.c fcm.h $(DEPS)
-	$(CC) -c $(CFLAGS) fcm.c
-
-repeat.o: repeat.c repeat.h $(DEPS)
-	$(CC) -c $(CFLAGS) repeat.c
-
-util.o: util.c util.h $(DEPS)
-	$(CC) -c $(CFLAGS) util.c
-
+$(BIN)/Jarvis: Jarvis.c $(DEPS) $(OBJS)
+	$(CC) $(CFLAGS) -o $(BIN)/Jarvis Jarvis.c $(OBJS) $(LIBS)
+bitio.o: bitio.c bitio.h
+	$(CC) -c $(CFLAGS) bitio.c
+arith.o: arith.c arith.h
+	$(CC) -c $(CFLAGS) arith.c
+arith_aux.o: arith_aux.c arith_aux.h
+	$(CC) -c $(CFLAGS) arith_aux.c
 clean:
+	/bin/rm -f *.o
+cleanall:
 	/bin/rm -f *.o $(PROGS)
-
+#=============================================================================
