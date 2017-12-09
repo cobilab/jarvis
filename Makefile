@@ -8,7 +8,7 @@ CPLP   = -ffast-math -msse2
 CFLAGS = -O3 -Wall $(CPLP) -DPROGRESS
 #-----------------------------------------------------------------------------
 LIBS   = -lm
-DEPS   = defs.h
+DEPS   = 
 PROGS  = $(BIN)/Jarvis
 OBJS   = bitio.o arith.o arith_aux.o
 #-----------------------------------------------------------------------------

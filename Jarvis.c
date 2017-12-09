@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                           J A R V I S   2 0 1 4                          //
+//                    J A R V I S   2 0 1 4 - 2 0 1 8                       //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -86,8 +86,7 @@ FILE *Fopen(const char *p, const char *m){
   return F;
   }
 
-uint64_t FNBytes(FILE *F)
-  {
+uint64_t FNBytes(FILE *F){
   uint64_t n = 0;
   fseek(F, 0, SEEK_END);
   n = ftell(F);
@@ -220,7 +219,8 @@ PMODEL *CreatePM(uint32_t n){
 
 typedef struct{
   uint16_t key;      // THE KEY (INDEX / HASHSIZE) STORED IN THIS ENTRY
-  uint32_t pos;      // THE LAST (NEAREST) REPEATING POSITION
+  uint8_t  nPos;     // NUMBER OF POSITIONS FOR THIS ENTRY
+  uint32_t *pos;     // THE LAST (NEAREST) REPEATING POSITION
   }
 ENTRY;
 
@@ -253,8 +253,8 @@ typedef struct{
   uint32_t nTries;   // NUMBER OF TIMES THIS MODEL WAS USED
   double   probs[4]; // REPEAT MODEL SYMBOL PROBABILITIES
   double   weight;   // WEIGHT OF THE MODEL FOR MIXTURE
-  double   acting;   // XXX: WTF? 
-  double   lastHit;  // XXX: WTF? 
+  double   acting;   // THE ACTING PERFORMANCE
+  double   lastHit;  // IS ON OR NOT
   uint8_t  rev;      // INVERTED REPETAT MODEL. IF REV='Y' THEN IS TRUE
   }
 RMODEL;
@@ -265,7 +265,8 @@ typedef struct{
   PARAM    *P;       // EXTRA PARAMETERS FOR REPEAT MODELS
   uint32_t nRM;      // CURRENT NUMBER OF REPEAT MODELS
   uint32_t mRM;      // MAXIMUM NUMBER OF REPEAT MODELS
-  uint64_t size;     // SIZE OF THE INPUT SEQUENCE
+  uint64_t size;     // SIZE OF THE INPUT SEQUENCE PACKED
+  uint64_t length;   // LENGTH OF THE INPUT SEQUENCE
   }
 RCLASS;
 
@@ -332,10 +333,10 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
     return 0;
 
   if(r == 0)
-    C->RM[m].pos = E->pos;
+    C->RM[m].pos = E->pos[0];
   else{
-    if(E->pos <= C->P->ctx+1) return 0;
-    C->RM[m].pos = E->pos-C->P->ctx-1;
+    if(E->pos[0] <= C->P->ctx+1) return 0;
+    C->RM[m].pos = E->pos[0] - C->P->ctx - 1;
     }
 
   C->RM[m].nHits  = 0;
@@ -358,17 +359,23 @@ void InsertKmerPos(RCLASS *C, uint64_t key, uint32_t pos){
  
   for(n = 0 ; n < C->hash->size[h] ; ++n)
     if(((uint64_t) C->hash->ent[h][n].key | b) == key){
-      C->hash->ent[h][n].pos = pos;           // STORE THE LAST K-MER POSITION
+      C->hash->ent[h][n].pos = (uint32_t *) Realloc(C->hash->ent[h][n].pos, 
+      (C->hash->ent[h][n].nPos + 1) * sizeof(uint32_t));
+      C->hash->ent[h][n].pos[C->hash->ent[h][n].nPos++] = pos; 
+      // STORE THE LAST K-MER POSITION
       return;
       }
 
   // CREATE A NEW ENTRY
-  C->hash->ent[h] = (ENTRY *) Realloc(C->hash->ent[h], (C->hash->size[h]+1) * 
-  sizeof(ENTRY));
-
+  C->hash->ent[h] = (ENTRY *) Realloc(C->hash->ent[h],  
+                    (C->hash->size[h]+1) * sizeof(ENTRY));
+  
   // CREATE A NEW POSITION
-  C->hash->ent[h][C->hash->size[h]].pos = pos;
-  C->hash->ent[h][C->hash->size[h]].key = (uint16_t) (key & 0xffff);
+  C->hash->ent[h][C->hash->size[h]].pos    = (uint32_t *) Calloc(1, 
+                                             sizeof(uint32_t));
+  C->hash->ent[h][C->hash->size[h]].nPos   = 1;
+  C->hash->ent[h][C->hash->size[h]].pos[0] = pos;
+  C->hash->ent[h][C->hash->size[h]].key    = (uint16_t) (key & 0xffff);
   C->hash->size[h]++;
   }
 
@@ -421,8 +428,7 @@ void RenormWeights(RCLASS *C){
 // STOP USELESS REPEAT MODELS
 //
 void StopRM(RCLASS *C){
-  uint32_t n;
-  uint8_t  a;
+  uint32_t n, a;
   do{
     a = 0;
     for(n = 0 ; n < C->nRM ; ++n)
@@ -452,7 +458,7 @@ void StartMultipleRMs(RCLASS *C, uint8_t *b){
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// COMPUTE AND EXTRAC MIXTURED PROBABILITIES
+// COMPUTE AND EXTRACT MIXTURED PROBABILITIES
 //
 void ComputeMixture(RCLASS *C, PMODEL *M, uint8_t *b){
   uint32_t r, s; 
@@ -486,12 +492,13 @@ void UpdateWeights(RCLASS *C, uint8_t *b, uint8_t s){
 // DECODE HEADER AN CREATE REPEAT CLASS
 //
 RCLASS *DecodeHeader(FILE *F){
-  uint64_t s;
+  uint64_t s, w;
   uint32_t m, l, c;
   double   a, b, g;
   uint8_t  r;
   RCLASS   *C;
   s = ReadNBits(64, F);
+  w = ReadNBits(64, F);
   m = ReadNBits(32, F);
   a = ReadNBits(16, F) / 65535.0;
   b = ReadNBits(16, F) / 65535.0;
@@ -500,17 +507,19 @@ RCLASS *DecodeHeader(FILE *F){
   c = ReadNBits(16, F);
   r = ReadNBits( 1, F);
   C = CreateRC(m, a, b, l, c, g, r);
-  C->size = s;
+  C->size   = s;
+  C->length = w;
 
   #ifdef DEBUG
-  printf("size = %"PRIu64"\n", C->size);
-  printf("max rep = %u\n",     C->mRM);
-  printf("alpha = %g\n",       C->P->alpha);
-  printf("beta = %g\n",        C->P->beta);
-  printf("gamma = %g\n",       C->P->gamma);
-  printf("limit = %u\n",       C->P->limit);
-  printf("ctx = %u\n",         C->P->ctx);
-  printf("ir = %u\n",          C->P->rev);
+  printf("size    = %"PRIu64"\n", C->size);
+  printf("length  = %"PRIu64"\n", C->length);
+  printf("max rep = %u\n",        C->mRM);
+  printf("alpha   = %g\n",        C->P->alpha);
+  printf("beta    = %g\n",        C->P->beta);
+  printf("gamma   = %g\n",        C->P->gamma);
+  printf("limit   = %u\n",        C->P->limit);
+  printf("ctx     = %u\n",        C->P->ctx);
+  printf("ir      = %u\n",        C->P->rev);
   #endif
 
   return C;
@@ -521,6 +530,7 @@ RCLASS *DecodeHeader(FILE *F){
 //
 void EncodeHeader(RCLASS *C, FILE *F){
   WriteNBits(C->size,                       64, F);
+  WriteNBits(C->length,                     64, F);
   WriteNBits(C->mRM,                        32, F);
   WriteNBits((uint16_t)(C->P->alpha*65535), 16, F);
   WriteNBits((uint16_t)(C->P->beta *65535), 16, F);
@@ -530,14 +540,15 @@ void EncodeHeader(RCLASS *C, FILE *F){
   WriteNBits(C->P->rev,                      1, F);
   
   #ifdef DEBUG
-  printf("size = %"PRIu64"\n", C->size);
-  printf("max rep = %u\n",     C->mRM);
-  printf("alpha = %g\n",       C->P->alpha);
-  printf("beta = %g\n",        C->P->beta);
-  printf("gamma = %g\n",       C->P->gamma);
-  printf("limit = %u\n",       C->P->limit);
-  printf("ctx = %u\n",         C->P->ctx);
-  printf("ir = %u\n",          C->P->rev);
+  printf("size    = %"PRIu64"\n", C->size);
+  printf("length  = %"PRIu64"\n", C->length);
+  printf("max rep = %u\n",        C->mRM);
+  printf("alpha   = %g\n",        C->P->alpha);
+  printf("beta    = %g\n",        C->P->beta);
+  printf("gamma   = %g\n",        C->P->gamma);
+  printf("limit   = %u\n",        C->P->limit);
+  printf("ctx     = %u\n",        C->P->ctx);
+  printf("ir      = %u\n",        C->P->rev);
   #endif
   }
 
@@ -545,14 +556,15 @@ void EncodeHeader(RCLASS *C, FILE *F){
 // COMPRESSION
 //
 void Compress(RCLASS *C, char *fn){
-  FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".co"), "w");
+  FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
   uint64_t i = 0, mSize = MAX_BUF, pos = 0;
   uint32_t m, n; 
   uint8_t  t[NSYM], *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)), 
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
   PMODEL   *MX = CreatePM(NSYM);
 
-  C->size = FNBytes(IN)>>2;
+  C->length = FNBytes(IN);
+  C->size   = C->length>>2;
 
   startoutputtingbits();
   start_encode();
@@ -568,21 +580,23 @@ void Compress(RCLASS *C, char *fn){
       InsertKmerPos(C, C->P->idx, pos++);                    // pos = (i<<2)+n
       RenormWeights(C);
       ComputeMixture(C, MX, buf);
-      ArithEncodeSymbol(sym, (int *)(MX->freqs), (int) MX->sum, OUT);
+      AESym(sym, (int *)(MX->freqs), (int) MX->sum, OUT);
       UpdateWeights(C, buf, sym);
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
 
     if(++i == mSize)    // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
-      buf = (uint8_t *) Realloc(buf, (mSize<<=1) * sizeof(uint8_t));
+      buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
     Progress(C->size, i); 
     }
 
-  printf("Size of DNA sequence: %"PRIu64"\n", pos);
+  WriteNBits(m, 8, OUT);
+  for(n = 0 ; n < m ; ++n)
+    WriteNBits(S2N(t[n]), 8, OUT);        // ENCODE REMAINING SYMBOLS
 
-  WriteNBits(m&3, 2, OUT);
-  while(m--) WriteNBits(S2N(t[m]), 2, OUT);        // ENCODE REMAINING SYMBOLS
+  fprintf(stderr, "Compression: %"PRIu64" -> %"PRIu64" ( %.6g )\n", C->length, 
+  (uint64_t) _bytes_output, (double) _bytes_output * 8.0 / C->length);
 
   finish_encode(OUT);
   doneoutputtingbits(OUT);
@@ -620,13 +634,14 @@ void Decompress(char *fn){
       }
 
     if(++i == mSize) // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
-      buf = (uint8_t *) Realloc(buf, (mSize<<=1) * sizeof(uint8_t));
+      buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
     Progress(C->size, i);
     }
 
-  m = ReadNBits(2, IN);
-  while(m--) fputc(N2S(ReadNBits(2, IN)), OUT);    // DECODE REMAINING SYMBOLS
+  m = ReadNBits(8, IN);
+  for(n = 0 ; n < m ; ++n)
+    fputc(N2S(ReadNBits(8, IN)), OUT);    // DECODE REMAINING SYMBOLS
 
   finish_decode();
   doneinputtingbits();
@@ -657,6 +672,7 @@ int main(int argc, char **argv){
     fprintf(stderr, "  -d            decompression mode             \n"); 
     fprintf(stderr, "                                               \n"); 
     fprintf(stderr, "  <FILE>        target file                    \n");
+    fprintf(stderr, "                                               \n"); 
     return 0;
     }
 
@@ -679,7 +695,7 @@ int main(int argc, char **argv){
     Decompress(argv[argc-1]);
     }
  
-  printf("Jarvis complete!");
+  fprintf(stderr, "Jarvis complete!\n");
   return 0;
   }
 

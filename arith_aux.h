@@ -1,6 +1,6 @@
 /*------------------------------------------------------------------------------
 
-Copyright 2011 Armando J. Pinho (ap@ua.pt), All Rights Reserved.
+Copyright 2010 IEETA / University of Aveiro, All Rights Reserved.
 
 These programs are supplied free of charge for research purposes only,
 and may not be sold or incorporated into any commercial product. There is
@@ -13,8 +13,20 @@ and every copy made of these files.
 
 ------------------------------------------------------------------------------*/
 
-void *Calloc(size_t nmemb, size_t size);
-void *Malloc(size_t size);
-void *Realloc(void *ptr, size_t size, size_t additionalSize);
-unsigned long TotalMem();
+#ifndef ARITH_AUX_H_INCLUDED
+#define ARITH_AUX_H_INCLUDED
+
+#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#include <unistd.h>
+
+void GetInterval(int *low, int *high, int *count, int symbol);
+int GetSymbol(int *low, int *high, int *count, int target, int nSymbols);
+void WriteNBits(uint64_t bits, int nBits, FILE *oFp);
+uint64_t ReadNBits(int nBits, FILE *iFp);
+void AESym(int symbol, int *counters, int totalCount, FILE *oFp);
+int ArithDecodeSymbol(int nSymbols, int *counters, int totalCount, FILE *iFp);
+
+#endif /* ARITH_AUX_H_INCLUDED */
 
