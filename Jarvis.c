@@ -23,20 +23,20 @@
 #include "arith.h"
 #include "arith_aux.h"
 
-#define MAX_BUF    1000000
-#define SCACHE     32
-#define NSYM       4
-#define MAXC       65535 //((1<<(sizeof(uint16_t)*8))-1)
-
-#define DEF_MRM    50
-#define DEF_CTX    11
-#define DEF_ALPHA  1
-#define DEF_GAMMA  0.95
-#define DEF_BETA   0.90
-#define DEF_LIMIT  5
-#define DEF_REV    0
-#define DEF_MODE   0
-#define INIWEIGHT  0.999
+#define MAX_BUF          1000000
+#define SCACHE           32
+#define NSYM             4
+#define MAXC             65535 //((1<<(sizeof(uint16_t)*8))-1)
+#define REPEATS_RANDOM   1
+#define DEF_MRM          50
+#define DEF_CTX          16
+#define DEF_ALPHA        1
+#define DEF_GAMMA        0.2
+#define DEF_BETA         0.90
+#define DEF_LIMIT        5
+#define DEF_REV          0
+#define DEF_MODE         0
+#define INIWEIGHT        0.999
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // SIMPLE MEMORY HANDLING FUNCTIONS
@@ -219,7 +219,7 @@ PMODEL *CreatePM(uint32_t n){
 
 typedef struct{
   uint16_t key;      // THE KEY (INDEX / HASHSIZE) STORED IN THIS ENTRY
-  uint8_t  nPos;     // NUMBER OF POSITIONS FOR THIS ENTRY
+  uint16_t nPos;     // NUMBER OF POSITIONS FOR THIS ENTRY
   uint32_t *pos;     // THE LAST (NEAREST) REPEATING POSITION
   }
 ENTRY;
@@ -248,13 +248,14 @@ typedef struct{
 PARAM;
 
 typedef struct{
-  uint32_t pos;      // XXX: Position of the next predicted symbol ??
+  uint32_t pos;      // POSITION OF THE SYMBOL
   uint32_t nHits;    // NUMBER OF TIMES THIS MODEL WAS CORRECT
   uint32_t nTries;   // NUMBER OF TIMES THIS MODEL WAS USED
   double   probs[4]; // REPEAT MODEL SYMBOL PROBABILITIES
   double   weight;   // WEIGHT OF THE MODEL FOR MIXTURE
   double   acting;   // THE ACTING PERFORMANCE
   double   lastHit;  // IS ON OR NOT
+  uint32_t id;       // ID OF THE HASH
   uint8_t  rev;      // INVERTED REPETAT MODEL. IF REV='Y' THEN IS TRUE
   }
 RMODEL;
@@ -333,10 +334,21 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
     return 0;
 
   if(r == 0)
-    C->RM[m].pos = E->pos[0];
+    #ifdef REPEATS_RANDOM
+    C->RM[m].pos = E->pos[ rand() % E->nPos ];
+    #else
+    C->RM[m].pos = E->pos[ 0 ];
+    #endif
   else{
-    if(E->pos[0] <= C->P->ctx+1) return 0;
-    C->RM[m].pos = E->pos[0] - C->P->ctx - 1;
+    #ifdef REPEATS_RANDOM
+    int32_t idx = rand() % E->nPos;
+    if(E->pos[ idx ] <= C->P->ctx+1) 
+      return 0;
+    C->RM[m].pos = E->pos[ idx ] - C->P->ctx - 1;
+    #else
+    if(E->pos[ 0 ] <= C->P->ctx+1) return 0;
+    C->RM[m].pos = E->pos[ 0 ] - C->P->ctx - 1;
+    #endif
     }
 
   C->RM[m].nHits  = 0;
@@ -562,6 +574,7 @@ void Compress(RCLASS *C, char *fn){
   uint8_t  t[NSYM], *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)), 
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
   PMODEL   *MX = CreatePM(NSYM);
+  srand(0);
 
   C->length = FNBytes(IN);
   C->size   = C->length>>2;
@@ -614,6 +627,7 @@ void Decompress(char *fn){
   uint8_t  *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)),
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
   PMODEL   *MX = CreatePM(NSYM);
+  srand(0);
 
   startinputtingbits();
   start_decode(IN);
