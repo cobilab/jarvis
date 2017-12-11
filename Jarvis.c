@@ -211,24 +211,24 @@ PMODEL *CreatePM(uint32_t n){
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// HASH TABLE TO STORE REPEATING POSITIONS AND INDEXES ALONG THE SEQUENCE
+// RHASH TABLE TO STORE REPEATING POSITIONS AND INDEXES ALONG THE SEQUENCE
 // DO NOT CHANGE THESE MACRO VALUES UNLESS YOU REALLY KNOW WHAT YOU ARE DOING!
 //
 #define HSIZE        16777259 // NEXT PRIME AFTER 16777216 (24 BITS)
 #define MAX_CTX      20       // ((HASH_SIZE (24 B) + KEY (16 B))>>1) = 20 
 
 typedef struct{
-  uint16_t key;      // THE KEY (INDEX / HASHSIZE) STORED IN THIS ENTRY
-  uint16_t nPos;     // NUMBER OF POSITIONS FOR THIS ENTRY
+  uint16_t key;      // THE KEY (INDEX / HASHSIZE) STORED IN THIS RENTRY
+  uint16_t nPos;     // NUMBER OF POSITIONS FOR THIS RENTRY
   uint32_t *pos;     // THE LAST (NEAREST) REPEATING POSITION
   }
-ENTRY;
+RENTRY;
 
 typedef struct{
-  uint16_t *size;    // NUMBER OF KEYS FOR EACH ENTRY
-  ENTRY    **ent;    // ENTRIES VECTORS POINTERS
+  uint16_t *size;    // NUMBER OF KEYS FOR EACH RENTRY
+  RENTRY   **ent;    // ENTRIES VECTORS POINTERS
   }
-HASH;
+RHASH;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // REPEAT MODELS TO HANDLE LONG SEGMENTS. DATA SUBSTITUTIONS DO NOT AFFECT THE
@@ -255,13 +255,13 @@ typedef struct{
   double   weight;   // WEIGHT OF THE MODEL FOR MIXTURE
   double   acting;   // THE ACTING PERFORMANCE
   double   lastHit;  // IS ON OR NOT
-  uint32_t id;       // ID OF THE HASH
+  uint32_t id;       // ID OF THE RHASH
   uint8_t  rev;      // INVERTED REPETAT MODEL. IF REV='Y' THEN IS TRUE
   }
 RMODEL;
 
 typedef struct{
-  HASH     *hash;    // REPEATING KMERS HASH TABLE
+  RHASH    *hash;    // REPEATING KMERS HASH TABLE
   RMODEL   *RM;      // POINTER FOR EACH OF THE MULTIPLE REPEAT MODELS
   PARAM    *P;       // EXTRA PARAMETERS FOR REPEAT MODELS
   uint32_t nRM;      // CURRENT NUMBER OF REPEAT MODELS
@@ -277,9 +277,9 @@ RCLASS;
 RCLASS *CreateRC(uint32_t m, double a, double b, uint32_t l, uint32_t c,
 double g, uint8_t i){
   RCLASS *C     = (RCLASS   *) Calloc(1,     sizeof(RCLASS  ));
-  C->hash       = (HASH     *) Calloc(1,     sizeof(HASH    ));
+  C->hash       = (RHASH    *) Calloc(1,     sizeof(RHASH   ));
   C->P          = (PARAM    *) Calloc(1,     sizeof(PARAM   ));
-  C->hash->ent  = (ENTRY   **) Calloc(HSIZE, sizeof(ENTRY  *));
+  C->hash->ent  = (RENTRY  **) Calloc(HSIZE, sizeof(RENTRY *));
   C->hash->size = (uint16_t *) Calloc(HSIZE, sizeof(uint16_t));
   C->RM         = (RMODEL   *) Calloc(m,     sizeof(RMODEL  ));
   C->mRM        = m;
@@ -310,9 +310,9 @@ uint64_t GetIdx(uint8_t *p, RCLASS *C){
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// GET REPEAT MODEL HASH ENTRY
+// GET REPEAT MODEL RHASH RENTRY
 //
-ENTRY *GetHEnt(RCLASS *C, uint64_t key){
+RENTRY *GetHEnt(RCLASS *C, uint64_t key){
   uint32_t n, h = (uint32_t) (key % HSIZE);
   uint64_t b = (uint64_t) key & 0xfffffff0000;
 
@@ -328,7 +328,7 @@ ENTRY *GetHEnt(RCLASS *C, uint64_t key){
 //
 int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
   uint32_t s;
-  ENTRY *E;
+  RENTRY *E;
 
   if((E = GetHEnt(C, i)) == NULL)
     return 0;
@@ -363,7 +363,7 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// INSERT KMER POSITION INTO HASH TABLE 
+// INSERT KMER POSITION INTO RHASH TABLE 
 //
 void InsertKmerPos(RCLASS *C, uint64_t key, uint32_t pos){
   uint32_t n, h = (uint32_t) key % HSIZE;
@@ -378,9 +378,9 @@ void InsertKmerPos(RCLASS *C, uint64_t key, uint32_t pos){
       return;
       }
 
-  // CREATE A NEW ENTRY
-  C->hash->ent[h] = (ENTRY *) Realloc(C->hash->ent[h],  
-                    (C->hash->size[h]+1) * sizeof(ENTRY));
+  // CREATE A NEW RENTRY
+  C->hash->ent[h] = (RENTRY *) Realloc(C->hash->ent[h],  
+                    (C->hash->size[h]+1) * sizeof(RENTRY));
   
   // CREATE A NEW POSITION
   C->hash->ent[h][C->hash->size[h]].pos    = (uint32_t *) Calloc(1, 
