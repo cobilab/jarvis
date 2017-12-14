@@ -4,8 +4,6 @@
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
-#define DEBUG
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,490 +13,20 @@
 #include <ctype.h>
 #include <time.h>
 #include <malloc.h>
-#include <stdint.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <unistd.h>
+#include "defs.h"
+#include "common.h"
+#include "levels.h"
+#include "dna.h"
+#include "args.h"
+#include "repeats.h"
+#include "files.h"
+#include "strings.h"
+#include "mem.h"
+#include "msg.h"
 #include "bitio.h"
 #include "arith.h"
 #include "arith_aux.h"
-
-#define MAX_BUF          1000000
-#define SCACHE           32
-#define NSYM             4
-#define MAXC             65535 //((1<<(sizeof(uint16_t)*8))-1)
-#define REPEATS_RANDOM   1
-#define DEF_MRM          50
-#define DEF_CTX          16
-#define DEF_ALPHA        1
-#define DEF_GAMMA        0.2
-#define DEF_BETA         0.90
-#define DEF_LIMIT        5
-#define DEF_REV          0
-#define DEF_MODE         0
-#define INIWEIGHT        0.999
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// SIMPLE MEMORY HANDLING FUNCTIONS
-//
-void ErrorQuit(size_t s){
-  fprintf(stderr, "Error allocating %zu bytes.\n", s);
-  exit(1);
-  }
-
-void *Malloc(size_t s){
-  void *p = malloc(s);
-  if(p == NULL) ErrorQuit(s);
-  return p;
-  }
-
-void *Calloc(size_t n, size_t s){
-  void *p = calloc(n, s);
-  if(p == NULL) ErrorQuit(s);
-  return p;
-  }
-
-void *Realloc(void *r, size_t s){
-  void *p = realloc(r, s);
-  if(p == NULL) ErrorQuit(s);
-  return p;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// SIMPLE STRINGS CONCATENATION FUNCTION 
-//
-char *Cat(char *a, char *b){
-  char *c = (char *) Malloc(strlen(a)+strlen(b)+1);
-  strcpy(c, a);
-  strcat(c, b);
-  return c;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// SIMPLE FILE HANDLING FUNCTIONS
-//
-FILE *Fopen(const char *p, const char *m){
-  FILE *F = fopen(p, m);
-  if(F == NULL){
-    fprintf(stderr, "Error opening: %s (mode %s). Does it exist?\n", p, m);
-    exit(1);
-    }
-  return F;
-  }
-
-uint64_t FNBytes(FILE *F){
-  uint64_t n = 0;
-  fseek(F, 0, SEEK_END);
-  n = ftell(F);
-  rewind(F);
-  return n;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// PERCENTAGE OF SEQUENCE COMPUTATION PROGRESS 
-//
-void Progress(uint64_t s, uint64_t i){
-  if(i%(s/100) == 0 && s > 100)
-    fprintf(stderr, "Progress:%3d %%\r", (uint8_t) (i/(s/100)));
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// SHIFT BUFFER TO RIGHT. PERHAPS A CIRCULAR BUFFER IS A BETTER APPROACH...
-//
-void ShiftRBuf(uint8_t *b, uint32_t s, uint8_t n){
-  memmove(b, b+1, s*sizeof(uint8_t));
-  b[s-1] = n;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// APPROXIMATED POWER FUNCTION [A LOT FASTER] FROM: http://martin.ankerl.com/
-// 2007/10/04/optimized-pow-approximation-for-java-and-c-c/
-// 
-double PW(double a, double b){
-  int t = (*(1+(int*)&a)), t2 = (int)(b*(t-1072632447)+1072632447);
-  double p = 0.0;
-  *(1+(int*)&p) = t2;
-  return p;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// SIMPLE ARGUMENTS PARSE FUNCTIONS
-//
-uint32_t ArgNum(uint32_t d, char *a[], uint32_t n, char *s){
-  for( ; --n ; ) if(!strcmp(s, a[n])) return atol(a[n+1]);
-  return d;
-  }
-
-double ArgDbl(double d, char *a[], uint32_t n, char *s){
-  for( ; --n ; ) if(!strcmp(s, a[n])) return atof(a[n+1]);
-  return d;
-  }
-
-uint8_t ArgBin(uint8_t d, char *a[], uint32_t n, char *s){
-  for( ; --n ; ) if(!strcmp(s, a[n])) return d==0?1:0;
-  return d;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// CONVERSION FROM NUMERICAL {0,1,2,3} TO SYMBOLICAL DNA {A,C,G,T}
-//
-uint8_t N2S(uint8_t x){
-  switch(x){
-    case 0: return 'A'; case 1: return 'C';
-    case 2: return 'G'; case 3: return 'T';
-    }
-  printf("Error: unknown numercial symbol!\n");
-  exit(1);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// CONVERSION FROM SYMBOLICAL DNA {A,C,G,T} TO NUMERICAL{0,1,2,3}
-//
-uint8_t S2N(uint8_t x){
-  switch(x){
-    case 'A': return 0; case 'C': return 1;
-    case 'G': return 2; case 'T': return 3;
-    }
-  printf("Error: found ascii index: %d. Alphabet is limited to {ACGT}!\n", x);
-  exit(1);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// NUMERICAL COMPLEMENT CONVERSION {0,1,2,3} -> {3,2,1,0} (SAME AS: 3-BASE)
-//
-uint8_t Comp(uint8_t x){
-  switch(x){
-    case 0: return 3; case 1: return 2; case 2: return 1; case 3: return 0;
-    }
-  printf("Error: invalid complement alphabet source!\n");
-  exit(1);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// CALCULATION OF CONTEXT MULTIPLICATOR FOR INDEX FUNCTION USAGE
-//
-uint64_t CalcMult(uint32_t c){
-  uint32_t n;
-  uint64_t x[c], p = 1;
-  for(n = 0 ; n < c ; ++n){
-    x[n] = p;
-    p  <<= 2;
-    }
-  return x[c-1];
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// GET NUMERICAL BASE FROM PACKED SEQUENCE BY ID. THE ID%4 IS GIVEN BY THE 2
-// LESS SIGNIFICATIVE BITS (ID&3).
-//
-uint8_t GetNBase(uint8_t *b, uint64_t i){
-  return (uint8_t) (((0x3<<((3-(i&0x3))<<1)) & b[i>>2])>>((3-(i&0x3))<<1));
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// MODEL AND FUNCTION TO STORE PROBABILITIES
-//
-typedef struct{
-  uint32_t *freqs;
-  uint32_t sum;
-  }
-PMODEL;
-
-PMODEL *CreatePM(uint32_t n){
-  PMODEL *P = (PMODEL   *) Calloc(1, sizeof(PMODEL));
-  P->freqs  = (uint32_t *) Calloc(n, sizeof(uint32_t));
-  return P;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RHASH TABLE TO STORE REPEATING POSITIONS AND INDEXES ALONG THE SEQUENCE
-// DO NOT CHANGE THESE MACRO VALUES UNLESS YOU REALLY KNOW WHAT YOU ARE DOING!
-//
-#define HSIZE        16777259 // NEXT PRIME AFTER 16777216 (24 BITS)
-#define MAX_CTX      20       // ((HASH_SIZE (24 B) + KEY (16 B))>>1) = 20 
-
-typedef struct{
-  uint16_t key;      // THE KEY (INDEX / HASHSIZE) STORED IN THIS RENTRY
-  uint16_t nPos;     // NUMBER OF POSITIONS FOR THIS RENTRY
-  uint32_t *pos;     // THE LAST (NEAREST) REPEATING POSITION
-  }
-RENTRY;
-
-typedef struct{
-  uint16_t *size;    // NUMBER OF KEYS FOR EACH RENTRY
-  RENTRY   **ent;    // ENTRIES VECTORS POINTERS
-  }
-RHASH;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// REPEAT MODELS TO HANDLE LONG SEGMENTS. DATA SUBSTITUTIONS DO NOT AFFECT THE
-// PERFORMANCE SO MUCH AS IN CONTEXT MODELS.
-//
-typedef struct{
-  uint64_t idx;      // CURRENT CONTEXT INDEX
-  uint64_t idxRev;   // CURRENT INVERTED REPEAT INDEX
-  uint64_t mult;     // CURRENT INVERTED REPEAT INDEX
-  uint32_t ctx;      // CONTEXT TEMPLATE SIZE FOR REPEAT MODEL
-  uint32_t limit;    // REPEAT PERFORMANCE LIMIT, ASSOCIATED WITH BETA
-  double   alpha;    // ALPHA PROBABILITY ESTIMATOR
-  double   beta;     // REPEAT PERFORMANCE DECAYING FOR REPEAT MOVE
-  double   gamma;    // PERFORMANCE DECAYING PARAMETER
-  uint8_t  rev;      // INVERTED REPEAT USAGE [MEMORY/TIME PAINFUL]
-  }
-PARAM;
-
-typedef struct{
-  uint32_t pos;      // POSITION OF THE SYMBOL
-  uint32_t nHits;    // NUMBER OF TIMES THIS MODEL WAS CORRECT
-  uint32_t nTries;   // NUMBER OF TIMES THIS MODEL WAS USED
-  double   probs[4]; // REPEAT MODEL SYMBOL PROBABILITIES
-  double   weight;   // WEIGHT OF THE MODEL FOR MIXTURE
-  double   acting;   // THE ACTING PERFORMANCE
-  double   lastHit;  // IS ON OR NOT
-  uint32_t id;       // ID OF THE RHASH
-  uint8_t  rev;      // INVERTED REPETAT MODEL. IF REV='Y' THEN IS TRUE
-  }
-RMODEL;
-
-typedef struct{
-  RHASH    *hash;    // REPEATING KMERS HASH TABLE
-  RMODEL   *RM;      // POINTER FOR EACH OF THE MULTIPLE REPEAT MODELS
-  PARAM    *P;       // EXTRA PARAMETERS FOR REPEAT MODELS
-  uint32_t nRM;      // CURRENT NUMBER OF REPEAT MODELS
-  uint32_t mRM;      // MAXIMUM NUMBER OF REPEAT MODELS
-  uint64_t size;     // SIZE OF THE INPUT SEQUENCE PACKED
-  uint64_t length;   // LENGTH OF THE INPUT SEQUENCE
-  }
-RCLASS;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// CREATES THE RCLASS BASIC STRUCTURE 
-//
-RCLASS *CreateRC(uint32_t m, double a, double b, uint32_t l, uint32_t c,
-double g, uint8_t i){
-  RCLASS *C     = (RCLASS   *) Calloc(1,     sizeof(RCLASS  ));
-  C->hash       = (RHASH    *) Calloc(1,     sizeof(RHASH   ));
-  C->P          = (PARAM    *) Calloc(1,     sizeof(PARAM   ));
-  C->hash->ent  = (RENTRY  **) Calloc(HSIZE, sizeof(RENTRY *));
-  C->hash->size = (uint16_t *) Calloc(HSIZE, sizeof(uint16_t));
-  C->RM         = (RMODEL   *) Calloc(m,     sizeof(RMODEL  ));
-  C->mRM        = m;
-  C->P->rev     = i;
-  C->P->alpha   = ((int)(a*65535))/65535.0;
-  C->P->beta    = ((int)(b*65535))/65535.0;
-  C->P->gamma   = ((int)(g*65535))/65535.0;
-  C->P->limit   = l;
-  C->P->ctx     = c;
-  C->P->mult    = CalcMult(c);
-  C->P->idx     = 0;
-  C->P->idxRev  = 0;
-  return C;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// REVERSE COMPLEMENT INDEX BASED ON PAST SYMBOLS
-//
-uint64_t GetIdxRev(uint8_t *p, RCLASS *C){
-  return (C->P->idxRev = (C->P->idxRev>>2)+Comp(*p)*C->P->mult);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// INDEX CALC BASED ON PAST SYMBOLS
-//
-uint64_t GetIdx(uint8_t *p, RCLASS *C){
-  return (C->P->idx = ((C->P->idx-*(p-C->P->ctx)*C->P->mult)<<2)+*p);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// GET REPEAT MODEL RHASH RENTRY
-//
-RENTRY *GetHEnt(RCLASS *C, uint64_t key){
-  uint32_t n, h = (uint32_t) (key % HSIZE);
-  uint64_t b = (uint64_t) key & 0xfffffff0000;
-
-  for(n = 0 ; n < C->hash->size[h] ; ++n)
-    if(((uint64_t) C->hash->ent[h][n].key | b) == key)
-      return &C->hash->ent[h][n];
-
-  return NULL;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// START EACH REPEAT MODEL, CURRENTLY BY RANDOM STORED POSITION 
-//
-int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
-  uint32_t s;
-  RENTRY *E;
-
-  if((E = GetHEnt(C, i)) == NULL)
-    return 0;
-
-  if(r == 0)
-    #ifdef REPEATS_RANDOM
-    C->RM[m].pos = E->pos[ rand() % E->nPos ];
-    #else
-    C->RM[m].pos = E->pos[ 0 ];
-    #endif
-  else{
-    #ifdef REPEATS_RANDOM
-    int32_t idx = rand() % E->nPos;
-    if(E->pos[ idx ] <= C->P->ctx+1) 
-      return 0;
-    C->RM[m].pos = E->pos[ idx ] - C->P->ctx - 1;
-    #else
-    if(E->pos[ 0 ] <= C->P->ctx+1) return 0;
-    C->RM[m].pos = E->pos[ 0 ] - C->P->ctx - 1;
-    #endif
-    }
-
-  C->RM[m].nHits  = 0;
-  C->RM[m].nTries = 0;
-  C->RM[m].rev    = r;
-  C->RM[m].acting = 0;
-  C->RM[m].weight = INIWEIGHT;
-  for(s = 0 ; s < NSYM ; ++s)
-    C->RM[m].probs[s] = 0;
-
-  return 1;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// INSERT KMER POSITION INTO RHASH TABLE 
-//
-void InsertKmerPos(RCLASS *C, uint64_t key, uint32_t pos){
-  uint32_t n, h = (uint32_t) key % HSIZE;
-  uint64_t b = key & 0xfffffff0000;
- 
-  for(n = 0 ; n < C->hash->size[h] ; ++n)
-    if(((uint64_t) C->hash->ent[h][n].key | b) == key){
-      C->hash->ent[h][n].pos = (uint32_t *) Realloc(C->hash->ent[h][n].pos, 
-      (C->hash->ent[h][n].nPos + 1) * sizeof(uint32_t));
-      C->hash->ent[h][n].pos[C->hash->ent[h][n].nPos++] = pos; 
-      // STORE THE LAST K-MER POSITION
-      return;
-      }
-
-  // CREATE A NEW RENTRY
-  C->hash->ent[h] = (RENTRY *) Realloc(C->hash->ent[h],  
-                    (C->hash->size[h]+1) * sizeof(RENTRY));
-  
-  // CREATE A NEW POSITION
-  C->hash->ent[h][C->hash->size[h]].pos    = (uint32_t *) Calloc(1, 
-                                             sizeof(uint32_t));
-  C->hash->ent[h][C->hash->size[h]].nPos   = 1;
-  C->hash->ent[h][C->hash->size[h]].pos[0] = pos;
-  C->hash->ent[h][C->hash->size[h]].key    = (uint16_t) (key & 0xffff);
-  C->hash->size[h]++;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// COMPUTE REPEAT MODEL PROBABILITIES
-//
-void ComputeRMProbs(RCLASS *C, RMODEL *R, uint8_t *b){
-  uint8_t n, s;
-  s = (R->rev == 1) ? Comp(GetNBase(b, R->pos)) : GetNBase(b, R->pos);
-  R->probs[s] = (R->nHits+C->P->alpha) / (R->nTries+2*C->P->alpha);
-  for(n = 0 ; n < NSYM ; ++n)
-    if(n != s){
-      R->probs[n] = (1-R->probs[s])/3;
-      }
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// UPDATE REPEAT MODEL
-//
-void UpdateRM(RMODEL *R, uint8_t *b, uint8_t s){
-  R->lastHit = 1;
-  if(R->rev == 0){
-    if(GetNBase(b, R->pos++) == s){
-      R->nHits++;
-      R->lastHit = 0;
-      }
-    }
-  else{
-    if(Comp(GetNBase(b, R->pos--)) == s){
-      R->nHits++;
-      R->lastHit = 0;
-      }
-    }
-  R->nTries++;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RENORMALIZE REPEAT WEIGHTS
-//
-void RenormWeights(RCLASS *C){
-  uint32_t n;
-  double   t = 0;
-  for(n = 0 ; n < C->nRM ; ++n)
-    t += C->RM[n].weight;
-  for(n = 0 ; n < C->nRM ; ++n)
-    C->RM[n].weight /= t;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// STOP USELESS REPEAT MODELS
-//
-void StopRM(RCLASS *C){
-  uint32_t n, a;
-  do{
-    a = 0;
-    for(n = 0 ; n < C->nRM ; ++n)
-      if((C->RM[n].acting = C->P->beta * C->RM[n].acting + C->RM[n].lastHit) > 
-      C->P->limit * 1.0 || C->RM[n].pos == 0)
-        {
-        if(n != C->nRM-1)
-          C->RM[n] = C->RM[C->nRM-1];
-        C->nRM--;
-        a = 1;
-        break;
-        }
-    }
-  while(a);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// START NEW REPEAT MODELS IF THERE IS STILL SPACE
-//                         
-void StartMultipleRMs(RCLASS *C, uint8_t *b){
-  if(C->nRM < C->mRM && StartRM(C, C->nRM, GetIdx(b, C), 0))
-    C->nRM++;
-
-  if(C->P->rev == 1 && C->nRM < C->mRM && StartRM(C, C->nRM, 
-  GetIdxRev(b, C), 1))
-    C->nRM++;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// COMPUTE AND EXTRACT MIXTURED PROBABILITIES
-//
-void ComputeMixture(RCLASS *C, PMODEL *M, uint8_t *b){
-  uint32_t r, s; 
-  double F[NSYM] = {0,0,0,0};
-  
-  for(r = 0 ; r < C->nRM ; ++r){
-    ComputeRMProbs(C, &C->RM[r], b);
-    for(s = 0 ; s < NSYM ; ++s)
-      F[s] += C->RM[r].probs[s] * C->RM[r].weight;
-    }
-
-  M->sum = 0;
-  for(s = 0 ; s < NSYM ; ++s){
-    M->freqs[s] = 1 + (uint32_t)(F[s] * MAXC);
-    M->sum += M->freqs[s];
-    }
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// UPDATE WEIGHTS ACCORDING TO THE PERFORMANCE OF EACH REPEAT MODEL
-//
-void UpdateWeights(RCLASS *C, uint8_t *b, uint8_t s){
-  uint32_t r;
-  for(r = 0 ; r < C->nRM ; ++r){
-    C->RM[r].weight = PW(C->RM[r].weight, C->P->gamma) * C->RM[r].probs[s];
-    UpdateRM(&C->RM[r], b, s);
-    }
-  }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // DECODE HEADER AN CREATE REPEAT CLASS
@@ -576,7 +104,7 @@ void Compress(RCLASS *C, char *fn){
   PMODEL   *MX = CreatePM(NSYM);
   srand(0);
 
-  C->length = FNBytes(IN);
+  C->length = NBytesInFile(IN);
   C->size   = C->length>>2;
 
   startoutputtingbits();
@@ -667,12 +195,17 @@ void Decompress(char *fn){
 // MAIN 
 //
 int main(int argc, char **argv){
-  char     **p = *&argv, i, d;
-  uint32_t c, l, m;
-  double   a, g, b;
-  RCLASS   *C;
+  char       **p = *&argv, **xargv, *xpl = NULL, i, d;
+  uint32_t   c, l, m;
+  double     a, g, b;
+  RCLASS     *C;
+  Parameters *P;
+  
+  P = (Parameters *) Malloc(1 * sizeof(Parameters));
 
-  if(argc < 2){
+  if((P->help = ArgState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
+    PrintMenu();
+/*
     fprintf(stderr, "Usage: Jarvis [OPTIONS]... [FILE]              \n"); 
     fprintf(stderr, "                                               \n"); 
     fprintf(stderr, "  -m <REPEATS>  maximum number of repeats      \n"); 
@@ -687,17 +220,33 @@ int main(int argc, char **argv){
     fprintf(stderr, "                                               \n"); 
     fprintf(stderr, "  <FILE>        target file                    \n");
     fprintf(stderr, "                                               \n"); 
-    return 0;
+*/
+    return EXIT_SUCCESS;
     }
 
-  m = ArgNum(DEF_MRM,   p, argc, "-m");    // SEE THE HEAD OF THE FILE FOR THE 
-  c = ArgNum(DEF_CTX,   p, argc, "-c");    // DEFAULT& NAIVE ESTIMATED VALUES.
-  a = ArgDbl(DEF_ALPHA, p, argc, "-a");    // THE ESTIMATION OF THE PARAMETERS
-  g = ArgDbl(DEF_GAMMA, p, argc, "-g");    // IMPROVE SUBSTANTIALLY THE REPEAT
-  b = ArgDbl(DEF_BETA,  p, argc, "-b");    // BASED COMPRESSION. AS SUCH, SOME
-  l = ArgNum(DEF_LIMIT, p, argc, "-l");    // TIME IN FUTURE WORKS MAY BE LOST
-  i = ArgBin(DEF_REV,   p, argc, "-i");    // FOR ESTIMATION OR IN INTELLIGENT
-  d = ArgBin(DEF_MODE,  p, argc, "-d");    // PREDICTION MODELLING DESIGN.
+  if(ArgState(DEF_VERSION, p, argc, "-V")){
+    PrintVersion();
+    return EXIT_SUCCESS;
+    }
+
+  if(ArgState(0, p, argc, "-s")){
+    PrintLevels();
+    return EXIT_SUCCESS;
+    }
+
+  P->verbose = ArgState  (DEFAULT_VERBOSE, p, argc, "-v" );
+  P->force   = ArgState  (DEFAULT_FORCE,   p, argc, "-f" );
+  P->estim   = ArgState  (0,               p, argc, "-e" );
+  P->level   = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
+
+  m = ArgNumber(DEF_MRM,   p, argc, "-m", 1, 20000);  // SEE THE HEAD OF THE FILE FOR THE 
+  c = ArgNumber(DEF_CTX,   p, argc, "-c", 1,    31);  // DEFAULT& NAIVE ESTIMATED VALUES.
+  a = ArgDouble(DEF_ALPHA, p, argc, "-a");            // THE ESTIMATION OF THE PARAMETERS
+  g = ArgDouble(DEF_GAMMA, p, argc, "-g");            // IMPROVE SUBSTANTIALLY THE REPEAT
+  b = ArgDouble(DEF_BETA,  p, argc, "-b");            // BASED COMPRESSION. AS SUCH, SOME
+  l = ArgNumber(DEF_LIMIT, p, argc, "-l", 1,    50);  // TIME IN FUTURE WORKS MAY BE LOST
+  i = ArgState (DEF_REV,   p, argc, "-i");            // FOR ESTIMATION OR IN INTELLIGENT
+  d = ArgState (DEF_MODE,  p, argc, "-d");            // PREDICTION MODELLING DESIGN.
  
   if(!d){
     fprintf(stderr, "Compressing ...\n"); 
@@ -709,7 +258,7 @@ int main(int argc, char **argv){
     Decompress(argv[argc-1]);
     }
  
-  fprintf(stderr, "Jarvis complete!\n");
+  fprintf(stderr, "Done!\n");
   return 0;
   }
 

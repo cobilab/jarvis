@@ -1,5 +1,5 @@
 #============================================================================#
-#                Jarvis 2014, IEETA/DETI, UNIVERSITY OF AVEIRO               #
+#             Jarvis 2014-2018, IEETA/DETI, UNIVERSITY OF AVEIRO             #
 #============================================================================#
 BIN    = .
 CC     = gcc
@@ -8,9 +8,10 @@ CPLP   = -ffast-math -msse2
 CFLAGS = -O3 -Wall $(CPLP) -DPROGRESS
 #-----------------------------------------------------------------------------
 LIBS   = -lm
-DEPS   = 
+DEPS   = defs.h
 PROGS  = $(BIN)/Jarvis
-OBJS   = bitio.o arith.o arith_aux.o
+OBJS   = bitio.o arith.o arith_aux.o levels.o common.o msg.o mem.o dna.o \
+         files.o strings.o args.o repeats.o pmodels.o
 #-----------------------------------------------------------------------------
 all:
 	$(MAKE) progs
@@ -23,6 +24,26 @@ arith.o: arith.c arith.h
 	$(CC) -c $(CFLAGS) arith.c
 arith_aux.o: arith_aux.c arith_aux.h
 	$(CC) -c $(CFLAGS) arith_aux.c
+levels.o: levels.c levels.h
+	$(CC) -c $(CFLAGS) levels.c
+common.o: common.c common.h
+	$(CC) -c $(CFLAGS) common.c
+msg.o: msg.c msg.h
+	$(CC) -c $(CFLAGS) msg.c
+mem.o: mem.c mem.h
+	$(CC) -c $(CFLAGS) mem.c
+dna.o: dna.c dna.h
+	$(CC) -c $(CFLAGS) dna.c
+files.o: files.c files.h
+	$(CC) -c $(CFLAGS) files.c
+strings.o: strings.c strings.h
+	$(CC) -c $(CFLAGS) strings.c
+args.o: args.c args.h
+	$(CC) -c $(CFLAGS) args.c
+repeats.o: repeats.c repeats.h
+	$(CC) -c $(CFLAGS) repeats.c
+pmodels.o: pmodels.c pmodels.h
+	$(CC) -c $(CFLAGS) pmodels.c
 clean:
 	/bin/rm -f *.o
 cleanall:
