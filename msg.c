@@ -14,22 +14,23 @@ void ModelsExplanation(void){
   "                         context size, <a> for the alpha (estimator    \n"
   "                         parameter), <b> to set beta, <l> to set limit,\n"
   "                         <g> for gamma (decayment forgetting factor)   \n"
-  "                         [0;1) and <i> to set the use or not of inveted\n"
-  "                         repeat models,                                \n"
+  "                         [0;1) and <i> for settong the usage or not of \n"
+  "                         inverted repeat models,                       \n"
   "                                                                       \n"
   "  -cm <c>:<d>:<i>:<g>/<m>:<e>:<i>:<g> CM (-cm 1:1:0:0.8/0:0:0:0),\n"
   "  -cm <c>:<d>:<i>:<g>/<m>:<e>:<i>:<g> CM (-cm 13:100:1:0.9/1:10:0:0.9),\n"
   "  ...                                                                  \n"
   "                         CM - Context Model parameters:                \n"
   "                                                                       \n"
-  "                         target and reference templates use <c> for    \n"
-  "                         context-order size, <d> for alpha (1/<d>), <g>\n"
-  "                         for gamma (decayment forgetting factor) [0;1),\n"
-  "                         <m> to the maximum sets the allowed substitutions,\n"
-  "                         on the context without being discarded (for   \n"
-  "                         deep contexts), under the alpha (1/<d>), using\n"
-  "                         <g> for gamma (decayment forgetting factor)   \n"
-  "                         [0;1),                       \n");
+  "                         use <c> for set the context-order size, <d>   \n"
+  "                         for alpha (1/<d>), <i> to set the usage or not\n"
+  "                         of inverted repeats, <g> for gamma (decayment \n"
+  "                         forgetting factor) [0;1), <m> to the maximum  \n"
+  "                         of allowed substitutions in the context       \n"
+  "                         without being discarded (for deep contexts),  \n"
+  "                         under the alpha (1/<d>), <i> to set the use or\n"
+  "                         not of inverted repeat models, using <g> for  \n"
+  "                         gamma (decayment forgetting factor) [0;1),    \n");
   } 
 
 
@@ -46,9 +47,8 @@ void PrintMenu(void){
   "  -s                     show Jarvis compression levels,               \n"
   "  -v                     verbose mode (more information),              \n"
   "  -V                     display version number,                       \n"
-  "  -f                     force overwrite of output,                    \n"
-  "  -l <level>             level of compression [1;3] (lazy -tm setup),  \n"
-  "  -t <threshold>         threshold frequency to discard from alphabet,\n");
+  "  -f                     force overwrite of the output,                \n"
+  "  -l <level>             level of compression [1;3],                   \n");
   #ifdef ESTIMATE
   fprintf(stderr,
   "  -e                     it creates a file with the extension \".iae\" \n"
@@ -57,8 +57,6 @@ void PrintMenu(void){
   ModelsExplanation();
   fprintf(stderr,
   "                                                                       \n"
-  "  -r <FILE>              reference file (\"-rm\" are loaded here),     \n"
-  "                                                                       \n"
   "Mandatory arguments:                                                   \n"
   "                                                                       \n"
   "  <FILE>:<...>:<...>     file to compress (last argument). For more    \n"
@@ -66,8 +64,8 @@ void PrintMenu(void){
   "                                                                       \n"
   "Example:                                                               \n"
   "                                                                       \n"
-  "  [Encode] ./Jarvis -v -tm 1:1:0.8/0:0:0 -tm 5:20:0.9/3:20:0.9 seq.txt \n"
-  "  [Decode] ./JArvis -v -d seq.txt.jc                                   \n"
+  "  [  Compression  ]      ./Jarvis -v -l 2 sequence.txt                 \n"
+  "  [ Decompression ]      ./Jarvis -v -d sequence.txt.jc                \n"
   "                                                                       \n"
   "Report issues to <{pratas,ap}@ua.pt>.                                  \n"
   "                                                                       \n");
