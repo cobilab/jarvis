@@ -195,34 +195,16 @@ void Decompress(char *fn){
 // MAIN 
 //
 int main(int argc, char **argv){
-  char       **p = *&argv, **xargv, *xpl = NULL, i;
-  int32_t    n, xargc;
-
-  uint32_t   c, l, m;
-  double     a, g, b;
+  char       **p = *&argv, **xargv, *xpl = NULL;
+  int32_t    n, k, xargc = 0;
   RCLASS     *C;
   Parameters *P;
+  clock_t    stop = 0, start = clock();
   
   P = (Parameters *) Malloc(1 * sizeof(Parameters));
 
   if((P->help = ArgState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
     PrintMenu();
-/*
-    fprintf(stderr, "Usage: Jarvis [OPTIONS]... [FILE]              \n"); 
-    fprintf(stderr, "                                               \n"); 
-    fprintf(stderr, "  -m <REPEATS>  maximum number of repeats      \n"); 
-    fprintf(stderr, "  -c <CONTEXT>  context order (k-mer)          \n"); 
-    fprintf(stderr, "  -a <ALPHA>    alpha probabilities estimator  \n"); 
-    fprintf(stderr, "  -b <BETA>     acceptance threshold           \n"); 
-    fprintf(stderr, "  -l <LIMIT>    limit for acceptance threshold \n"); 
-    fprintf(stderr, "  -g <GAMMA>    mixture decay factor           \n"); 
-    fprintf(stderr, "  -i            use inverted repeats           \n"); 
-    fprintf(stderr, "                                               \n"); 
-    fprintf(stderr, "  -d            decompression mode             \n"); 
-    fprintf(stderr, "                                               \n"); 
-    fprintf(stderr, "  <FILE>        target file                    \n");
-    fprintf(stderr, "                                               \n"); 
-*/
     return EXIT_SUCCESS;
     }
 
@@ -259,59 +241,56 @@ int main(int argc, char **argv){
 
   if(P->nModels == 0){
     MsgNoModels();
-    fprintf(stderr, "Error: at least you need to use a context model!\n");
     return 1;
     }
 
   P->model = (ModelPar *) Calloc(P->nModels, sizeof(ModelPar));
 
-/*
   k = 0;
-  refNModels = 0;
   for(n = 1 ; n < argc ; ++n)
-    if(strcmp(argv[n], "-rm") == 0){
-      P->model[k++] = ArgsUniqModel(argv[n+1], 1);
-      ++refNModels;
-      }
+    if(strcmp(argv[n], "-cm") == 0)
+      P->model[k++] = ArgsUniqCModel(argv[n+1], 0);
   if(P->level != 0){
     for(n = 1 ; n < xargc ; ++n)
-      if(strcmp(xargv[n], "-rm") == 0){
-        P->model[k++] = ArgsUniqModel(xargv[n+1], 1);
-        ++refNModels;
-        }
+      if(strcmp(xargv[n], "-cm") == 0)
+        P->model[k++] = ArgsUniqCModel(xargv[n+1], 0);
     }
-
   for(n = 1 ; n < argc ; ++n)
-    if(strcmp(argv[n], "-tm") == 0)
-      P->model[k++] = ArgsUniqModel(argv[n+1], 0);
+    if(strcmp(argv[n], "-rm") == 0)
+      P->model[k++] = ArgsUniqRModel(argv[n+1], 0);
   if(P->level != 0){
     for(n = 1 ; n < xargc ; ++n)
-      if(strcmp(xargv[n], "-tm") == 0)
-        P->model[k++] = ArgsUniqModel(xargv[n+1], 0);
+      if(strcmp(xargv[n], "-rm") == 0)
+        P->model[k++] = ArgsUniqRModel(xargv[n+1], 0);
     }
 
-*/
-
-
-  m = ArgNumber(DEF_MRM,   p, argc, "-m", 1, 20000);  // SEE THE HEAD OF THE FILE FOR THE 
-  c = ArgNumber(DEF_CTX,   p, argc, "-c", 1,    31);  // DEFAULT& NAIVE ESTIMATED VALUES.
-  a = ArgDouble(DEF_ALPHA, p, argc, "-a");            // THE ESTIMATION OF THE PARAMETERS
-  g = ArgDouble(DEF_GAMMA, p, argc, "-g");            // IMPROVE SUBSTANTIALLY THE REPEAT
-  b = ArgDouble(DEF_BETA,  p, argc, "-b");            // BASED COMPRESSION. AS SUCH, SOME
-  l = ArgNumber(DEF_LIMIT, p, argc, "-l", 1,    50);  // TIME IN FUTURE WORKS MAY BE LOST
-  i = ArgState (DEF_REV,   p, argc, "-i");            // FOR ESTIMATION OR IN INTELLIGENT
-  P->mode = ArgState (DEF_MODE,  p, argc, "-d");            // PREDICTION MODELLING DESIGN.
+  P->nTar = ReadFNames(P, argv[argc-1]);
+  P->mode = ArgState (DEF_MODE,  p, argc, "-d"); // COMPRESS OR DECOMPRESS
  
   if(!P->mode){
+
+//  if(P->verbose) PrintArgs(P);
+
+    int rep_idx = 0;
+
     fprintf(stderr, "Compressing ...\n"); 
-    C = CreateRC(m, a, b, l, c, g, i);
+    C = CreateRC(P->model[rep_idx].nr,    P->model[rep_idx].alpha, 
+                 P->model[rep_idx].beta,  P->model[rep_idx].limit, 
+                 P->model[rep_idx].ctx,   P->model[rep_idx].gamma, 
+                 P->model[rep_idx].ir);
+
     Compress(C, argv[argc-1]);
     }
   else{
     fprintf(stderr, "Decompressing ...\n"); 
     Decompress(argv[argc-1]);
     }
- 
+
+  stop = clock();
+  if(P->verbose)
+    fprintf(stderr, "Spent %g seconds.\n", ((double)(stop-start)) / 
+    CLOCKS_PER_SEC); 
+
   fprintf(stderr, "Done!\n");
   return 0;
   }

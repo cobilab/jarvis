@@ -14,12 +14,14 @@
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED
 
 typedef struct{
+  uint32_t nr;
   uint32_t ctx;
   uint32_t den;
   uint32_t ir;
   uint32_t edits;
   uint32_t eDen;
   uint8_t  type;
+  double   alpha;
   double   beta;
   int32_t  limit;
   int32_t  copy;

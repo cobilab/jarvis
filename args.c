@@ -91,42 +91,47 @@ ModelPar ArgsUniqCModel(char *str, uint8_t type){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ModelPar ArgsUniqRModel(char *str, uint8_t type){
-  uint32_t  ctx, den, edits, eDen;
-  double    gamma, eGamma;
+  uint32_t  m, ctx, limit, ir;
+  double    alpha, beta, gamma;
   ModelPar  Mp;
 
-  if(sscanf(str, "%u:%u:%lf/%u:%u:%lf", &ctx, &den, &gamma, &edits, &eDen,
-  &eGamma ) == 6){
-    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN ||
-    gamma >= 1.0 || gamma < 0.0 || eGamma >= 1.0 || eGamma < 0.0 ||edits > 256
-    || eDen > 50000){
-      fprintf(stderr, "Error: invalid model arguments range!\n");
-      ModelsExplanation();
-      fprintf(stderr, "\nPlease reset the models according to the above "
-      "description.\n");
-      exit(1);
-      }
+  if(sscanf(str, "%u:%u:%lf:%lf:%u:%lf:%u", 
+  &m, &ctx, &alpha, &beta, &limit, &gamma, &ir) == 7){
+
+    if(m      >  100000  || m      <  1       ||
+       ctx    >  MAX_CTX || ctx    <  MIN_CTX ||
+       alpha  >  1       || alpha  <= 0       || 
+       beta   >= 1       || beta   <= 0       ||
+       limit  >  21      || limit  <= 0       ||
+       gamma  >= 1       || gamma  <= 0       ||
+       ir     >  1       || ir     <  0){
+       fprintf(stderr, "Error: invalid model arguments range!\n");
+       ModelsExplanation();
+       fprintf(stderr, "\nPlease reset the models according to the above "
+       "description.\n");
+       exit(1);
+       }
+       
+    Mp.nr     = m;
     Mp.ctx    = ctx;
-    Mp.den    = den;
+    Mp.alpha  = ((int)(alpha * 65534)) / 65534.0;
+    Mp.beta   = ((int)(beta  * 65534)) / 65534.0;
     Mp.gamma  = ((int)(gamma * 65534)) / 65534.0;
-    Mp.eGamma = ((int)(eGamma * 65534)) / 65534.0;
-    Mp.edits  = edits;
-    Mp.eDen   = eDen;
-    Mp.type   = type;
+    Mp.limit  = limit;
+    Mp.ir     = ir;
+    Mp.type   = 1;
+
     return Mp;
     }
   else{
-    fprintf(stderr, "Error: unknown scheme for model arguments!\n");
+    fprintf(stderr, "Error: unknown scheme for repeat model arguments!\n");
+    fprintf(stderr, "Plz, reset the models according to the description:\n");
     ModelsExplanation();
-    fprintf(stderr, "\nPlease reset the models according to the above "
-    "description.\n");
     exit(1);
     }
 
   return Mp;
   }
-
-
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
