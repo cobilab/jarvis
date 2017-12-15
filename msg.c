@@ -39,7 +39,7 @@ void PrintMenu(void){
   "                                                                       \n"
   "Jarvis: A tool to compress efficiently DNA sequences.                  \n"  
   "                                                                       \n"
-  "Usage: Jarvis [OPTION]... -r [FILE]  [FILE]:[...]                      \n"
+  "Usage: Jarvis [OPTION]... [FILE]:[...]                                 \n"
   "                                                                       \n"
   "Non-mandatory arguments:                                               \n"
   "                                                                       \n"
@@ -76,7 +76,7 @@ void PrintVersion(void){
   fprintf(stderr,
   "                                                                       \n"
   "                          ================                             \n"
-  "                          | Jarvis v%u.%u |                        \n"
+  "                          | Jarvis  v%u.%u |                        \n"
   "                          ================                             \n"
   "                                                                       \n"
   "      Efficient compression and decompression of DNA sequences.        \n"
