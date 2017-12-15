@@ -52,7 +52,7 @@ char *ArgString(char *def, char *arg[], uint32_t n, char *str){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ModelPar ArgsUniqModel(char *str, uint8_t type){
+ModelPar ArgsUniqCModel(char *str, uint8_t type){
   uint32_t  ctx, den, edits, eDen;
   double    gamma, eGamma;
   ModelPar  Mp;
@@ -87,6 +87,46 @@ ModelPar ArgsUniqModel(char *str, uint8_t type){
 
   return Mp;
   }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ModelPar ArgsUniqRModel(char *str, uint8_t type){
+  uint32_t  ctx, den, edits, eDen;
+  double    gamma, eGamma;
+  ModelPar  Mp;
+
+  if(sscanf(str, "%u:%u:%lf/%u:%u:%lf", &ctx, &den, &gamma, &edits, &eDen,
+  &eGamma ) == 6){
+    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN ||
+    gamma >= 1.0 || gamma < 0.0 || eGamma >= 1.0 || eGamma < 0.0 ||edits > 256
+    || eDen > 50000){
+      fprintf(stderr, "Error: invalid model arguments range!\n");
+      ModelsExplanation();
+      fprintf(stderr, "\nPlease reset the models according to the above "
+      "description.\n");
+      exit(1);
+      }
+    Mp.ctx    = ctx;
+    Mp.den    = den;
+    Mp.gamma  = ((int)(gamma * 65534)) / 65534.0;
+    Mp.eGamma = ((int)(eGamma * 65534)) / 65534.0;
+    Mp.edits  = edits;
+    Mp.eDen   = eDen;
+    Mp.type   = type;
+    return Mp;
+    }
+  else{
+    fprintf(stderr, "Error: unknown scheme for model arguments!\n");
+    ModelsExplanation();
+    fprintf(stderr, "\nPlease reset the models according to the above "
+    "description.\n");
+    exit(1);
+    }
+
+  return Mp;
+  }
+
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

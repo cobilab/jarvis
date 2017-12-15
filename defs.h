@@ -6,7 +6,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#pragma pack(1)
+//#pragma pack(1)
 
 #define DEBUG 1
 
@@ -34,6 +34,7 @@ typedef struct{
   uint8_t  force;
   uint8_t  estim;
   uint8_t  level;
+  uint8_t  mode;
   uint32_t col;
   ModelPar *model;
   char     *ref;

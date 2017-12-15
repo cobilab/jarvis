@@ -195,7 +195,9 @@ void Decompress(char *fn){
 // MAIN 
 //
 int main(int argc, char **argv){
-  char       **p = *&argv, **xargv, *xpl = NULL, i, d;
+  char       **p = *&argv, **xargv, *xpl = NULL, i;
+  int32_t    n, xargc;
+
   uint32_t   c, l, m;
   double     a, g, b;
   RCLASS     *C;
@@ -239,6 +241,58 @@ int main(int argc, char **argv){
   P->estim   = ArgState  (0,               p, argc, "-e" );
   P->level   = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
 
+  P->nModels = 0;
+  for(n = 1 ; n < argc ; ++n)
+    if(strcmp(argv[n], "-cm") == 0 || strcmp(argv[n], "-rm") == 0)
+      P->nModels += 1;
+
+  if(P->nModels == 0 && P->level == 0)
+    P->level = DEFAULT_LEVEL;
+
+  if(P->level != 0){
+    xpl = GetLevels(P->level);
+    xargc = StrToArgv(xpl, &xargv);
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-cm") == 0 || strcmp(xargv[n], "-rm") == 0)
+        P->nModels += 1;
+    }
+
+  if(P->nModels == 0){
+    MsgNoModels();
+    fprintf(stderr, "Error: at least you need to use a context model!\n");
+    return 1;
+    }
+
+  P->model = (ModelPar *) Calloc(P->nModels, sizeof(ModelPar));
+
+/*
+  k = 0;
+  refNModels = 0;
+  for(n = 1 ; n < argc ; ++n)
+    if(strcmp(argv[n], "-rm") == 0){
+      P->model[k++] = ArgsUniqModel(argv[n+1], 1);
+      ++refNModels;
+      }
+  if(P->level != 0){
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-rm") == 0){
+        P->model[k++] = ArgsUniqModel(xargv[n+1], 1);
+        ++refNModels;
+        }
+    }
+
+  for(n = 1 ; n < argc ; ++n)
+    if(strcmp(argv[n], "-tm") == 0)
+      P->model[k++] = ArgsUniqModel(argv[n+1], 0);
+  if(P->level != 0){
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-tm") == 0)
+        P->model[k++] = ArgsUniqModel(xargv[n+1], 0);
+    }
+
+*/
+
+
   m = ArgNumber(DEF_MRM,   p, argc, "-m", 1, 20000);  // SEE THE HEAD OF THE FILE FOR THE 
   c = ArgNumber(DEF_CTX,   p, argc, "-c", 1,    31);  // DEFAULT& NAIVE ESTIMATED VALUES.
   a = ArgDouble(DEF_ALPHA, p, argc, "-a");            // THE ESTIMATION OF THE PARAMETERS
@@ -246,9 +300,9 @@ int main(int argc, char **argv){
   b = ArgDouble(DEF_BETA,  p, argc, "-b");            // BASED COMPRESSION. AS SUCH, SOME
   l = ArgNumber(DEF_LIMIT, p, argc, "-l", 1,    50);  // TIME IN FUTURE WORKS MAY BE LOST
   i = ArgState (DEF_REV,   p, argc, "-i");            // FOR ESTIMATION OR IN INTELLIGENT
-  d = ArgState (DEF_MODE,  p, argc, "-d");            // PREDICTION MODELLING DESIGN.
+  P->mode = ArgState (DEF_MODE,  p, argc, "-d");            // PREDICTION MODELLING DESIGN.
  
-  if(!d){
+  if(!P->mode){
     fprintf(stderr, "Compressing ...\n"); 
     C = CreateRC(m, a, b, l, c, g, i);
     Compress(C, argv[argc-1]);

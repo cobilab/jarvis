@@ -7,6 +7,7 @@ void   ModelsExplanation  (void);
 void   PrintMenu          (void);
 void   PrintMenuD         (void);
 void   PrintVersion       (void);
+void   MsgNoModels        (void);
 
 #endif
 
