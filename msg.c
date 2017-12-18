@@ -88,8 +88,13 @@ void PrintVersion(void){
   "Diogo Pratas.\n\n", VERSION, RELEASE);
   }
 
-
 void MsgNoModels(void){
   fprintf(stderr, "Error: at least you need to use a context or repeat model!\n");
+  }
+
+void FailModelScheme(void){
+  fprintf(stderr, "Error: unknown scheme for repeat model arguments!\n");
+  fprintf(stderr, "Plz, reset the models according to the description:\n");
+  ModelsExplanation();
   }
 

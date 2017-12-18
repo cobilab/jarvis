@@ -11,7 +11,8 @@ LIBS   = -lm
 DEPS   = defs.h
 PROGS  = $(BIN)/Jarvis
 OBJS   = bitio.o arith.o arith_aux.o levels.o common.o msg.o mem.o dna.o \
-         files.o strings.o args.o repeats.o pmodels.o
+         files.o strings.o args.o repeats.o pmodels.o buffer.o cm_tolerant.o \
+         cm_array.o cm_hash.o cm_pmodels.o cm.o
 #-----------------------------------------------------------------------------
 all:
 	$(MAKE) progs
@@ -44,6 +45,18 @@ repeats.o: repeats.c repeats.h
 	$(CC) -c $(CFLAGS) repeats.c
 pmodels.o: pmodels.c pmodels.h
 	$(CC) -c $(CFLAGS) pmodels.c
+buffer.o: buffer.c buffer.h
+	$(CC) -c $(CFLAGS) buffer.c
+cm_tolerant.o: cm_tolerant.c cm_tolerant.h
+	$(CC) -c $(CFLAGS) cm_tolerant.c
+cm_array.o: cm_array.c cm_array.h
+	$(CC) -c $(CFLAGS) cm_array.c
+cm_hash.o: cm_hash.c cm_hash.h
+	$(CC) -c $(CFLAGS) cm_hash.c
+cm_pmodels.o: cm_pmodels.c cm_pmodels.h
+	$(CC) -c $(CFLAGS) cm_pmodels.c
+cm.o: cm.c cm.h
+	$(CC) -c $(CFLAGS) cm.c
 clean:
 	/bin/rm -f *.o
 cleanall:

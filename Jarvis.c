@@ -20,6 +20,7 @@
 #include "dna.h"
 #include "args.h"
 #include "repeats.h"
+#include "cm.h"
 #include "files.h"
 #include "strings.h"
 #include "mem.h"
@@ -95,7 +96,7 @@ void EncodeHeader(RCLASS *C, FILE *F){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // COMPRESSION
 //
-void Compress(RCLASS *C, char *fn){
+void Compress(Parameters *P, char *fn){
   FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
   uint64_t i = 0, mSize = MAX_BUF, pos = 0;
   uint32_t m, n; 
@@ -103,6 +104,12 @@ void Compress(RCLASS *C, char *fn){
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
   PMODEL   *MX = CreatePM(NSYM);
   srand(0);
+
+  int32_t rep_idx = 0;
+  RCLASS *C = CreateRC(P->model[rep_idx].nr,    P->model[rep_idx].alpha,
+                       P->model[rep_idx].beta,  P->model[rep_idx].limit,
+                       P->model[rep_idx].ctx,   P->model[rep_idx].gamma,
+                       P->model[rep_idx].ir);
 
   C->length = NBytesInFile(IN);
   C->size   = C->length>>2;
@@ -197,7 +204,6 @@ void Decompress(char *fn){
 int main(int argc, char **argv){
   char       **p = *&argv, **xargv, *xpl = NULL;
   int32_t    n, k, xargc = 0;
-  RCLASS     *C;
   Parameters *P;
   clock_t    stop = 0, start = clock();
   
@@ -239,7 +245,7 @@ int main(int argc, char **argv){
         P->nModels += 1;
     }
 
-  if(P->nModels == 0){
+  if(P->nModels == 0 && !P->mode){
     MsgNoModels();
     return 1;
     }
@@ -268,18 +274,9 @@ int main(int argc, char **argv){
   P->mode = ArgState (DEF_MODE,  p, argc, "-d"); // COMPRESS OR DECOMPRESS
  
   if(!P->mode){
-
-//  if(P->verbose) PrintArgs(P);
-
-    int rep_idx = 0;
-
+    if(P->verbose) PrintArgs(P);
     fprintf(stderr, "Compressing ...\n"); 
-    C = CreateRC(P->model[rep_idx].nr,    P->model[rep_idx].alpha, 
-                 P->model[rep_idx].beta,  P->model[rep_idx].limit, 
-                 P->model[rep_idx].ctx,   P->model[rep_idx].gamma, 
-                 P->model[rep_idx].ir);
-
-    Compress(C, argv[argc-1]);
+    Compress(P, argv[argc-1]);
     }
   else{
     fprintf(stderr, "Decompressing ...\n"); 

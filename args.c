@@ -53,35 +53,39 @@ char *ArgString(char *def, char *arg[], uint32_t n, char *str){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ModelPar ArgsUniqCModel(char *str, uint8_t type){
-  uint32_t  ctx, den, edits, eDen;
+  uint32_t  ctx, den, eDen, ir, eIr, edits;
   double    gamma, eGamma;
   ModelPar  Mp;
 
-  if(sscanf(str, "%u:%u:%lf/%u:%u:%lf", &ctx, &den, &gamma, &edits, &eDen, 
-  &eGamma ) == 6){
-    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN || 
-    gamma >= 1.0 || gamma < 0.0 || eGamma >= 1.0 || eGamma < 0.0 ||edits > 256 
-    || eDen > 50000){
-      fprintf(stderr, "Error: invalid model arguments range!\n");
-      ModelsExplanation();
-      fprintf(stderr, "\nPlease reset the models according to the above " 
-      "description.\n");
-      exit(1);
-      }
+  if(sscanf(str, "%u:%u:%u:%lf/%u:%u:%u:%lf", 
+    &ctx, &den, &ir, &gamma, &edits, &eDen, &eIr, &eGamma) == 8){
+
+    if(ctx    >  MAX_CTX || ctx    < MIN_CTX ||
+       den    >  MAX_DEN || den    < MIN_DEN || 
+       gamma  >= 1.0     || gamma  < 0.0     || 
+       eGamma >= 1.0     || eGamma < 0.0     ||
+       edits  >  256     || eDen   > 50000   ||
+       ir     >  1       || ir     < 0       ||
+       eIr    >  1       || eIr    < 0){
+       FailModelScheme();
+       exit(1);
+       }
+
     Mp.ctx    = ctx;
     Mp.den    = den;
-    Mp.gamma  = ((int)(gamma * 65534)) / 65534.0;
+    Mp.gamma  = ((int)(gamma  * 65534)) / 65534.0;
     Mp.eGamma = ((int)(eGamma * 65534)) / 65534.0;
     Mp.edits  = edits;
     Mp.eDen   = eDen;
     Mp.type   = type;
+    Mp.ir     = ir;
+    Mp.eIr    = eIr;
+    Mp.copy   = 0;
+
     return Mp;
     }
   else{
-    fprintf(stderr, "Error: unknown scheme for model arguments!\n");
-    ModelsExplanation();
-    fprintf(stderr, "\nPlease reset the models according to the above "
-    "description.\n");
+    FailModelScheme();
     exit(1);
     }
 
@@ -105,10 +109,7 @@ ModelPar ArgsUniqRModel(char *str, uint8_t type){
        limit  >  21      || limit  <= 0       ||
        gamma  >= 1       || gamma  <= 0       ||
        ir     >  1       || ir     <  0){
-       fprintf(stderr, "Error: invalid model arguments range!\n");
-       ModelsExplanation();
-       fprintf(stderr, "\nPlease reset the models according to the above "
-       "description.\n");
+       FailModelScheme();
        exit(1);
        }
        
@@ -120,13 +121,12 @@ ModelPar ArgsUniqRModel(char *str, uint8_t type){
     Mp.limit  = limit;
     Mp.ir     = ir;
     Mp.type   = 1;
+    Mp.copy   = 1;
 
     return Mp;
     }
   else{
-    fprintf(stderr, "Error: unknown scheme for repeat model arguments!\n");
-    fprintf(stderr, "Plz, reset the models according to the description:\n");
-    ModelsExplanation();
+    FailModelScheme();
     exit(1);
     }
 
@@ -158,49 +158,56 @@ uint32_t ReadFNames(Parameters *P, char *arg){
 void PrintArgs(Parameters *P){
   uint32_t n = 0;
 
-  fprintf(stderr, "Force mode ......................... %s\n", P->force == 0 ? 
+  fprintf(stderr, "Verbose mode ....................... %s\n", !P->verbose ?
+  "no" : "yes"); 
+  fprintf(stderr, "Force mode ......................... %s\n", !P->force ? 
   "no" : "yes");
 
   for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].type == 1){
-      fprintf(stderr, "Reference model %d:\n", n+1);
-      fprintf(stderr, "  [+] Context order ................ %u\n", 
+    if(P->model[n].copy == 0){
+      fprintf(stderr, "Context model %d:\n", n+1);
+      fprintf(stderr, "  [+] Context order (depth) ........ %u\n", 
       P->model[n].ctx);
-      fprintf(stderr, "  [+] Alpha denominator ............ %u\n", 
-      P->model[n].den);
-      fprintf(stderr, "  [+] Gamma ........................ %.2lf\n", 
+      fprintf(stderr, "  [+] Alpha ........................ %.3lf\n", 
+      1.0 / P->model[n].den);
+      fprintf(stderr, "  [+] Gamma ........................ %.3lf\n", 
       P->model[n].gamma);
-      fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
-      P->model[n].edits);
-      if(P->model[n].edits != 0){
-        fprintf(stderr, "  [+] Substitutions alpha den ...... %u\n",
-        P->model[n].eDen);
-        fprintf(stderr, "  [+] Substitutions gamma .......... %.2lf\n",
+      fprintf(stderr, "  [+] Using inversions ............. %s\n",
+      P->model[n].ir == 1 ? "yes" : "no"); 
+      if(P->model[n].edits > 0){
+        fprintf(stderr, "Substitutional tolerant context model:\n");
+        fprintf(stderr, "  [+] Context order (depth) ........ %u\n",
+        P->model[n].ctx);
+        fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
+        P->model[n].edits);
+        fprintf(stderr, "  [+] Alpha ........................ %.3lf\n",
+        1.0 / P->model[n].eDen);
+        fprintf(stderr, "  [+] Gamma ........................ %.3lf\n",
         P->model[n].eGamma);
-        }
-    }
-
-  for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].type == 0){
-      fprintf(stderr, "Target model %d:\n", n+1);
-      fprintf(stderr, "  [+] Context order ................ %u\n",
-      P->model[n].ctx);
-      fprintf(stderr, "  [+] Alpha denominator ............ %u\n",
-      P->model[n].den);
-      fprintf(stderr, "  [+] Gamma ........................ %.2lf\n", 
-      P->model[n].gamma);
-      fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
-      P->model[n].edits);
-      if(P->model[n].edits != 0){
-        fprintf(stderr, "  [+] Substitutions alpha den ...... %u\n",
-        P->model[n].eDen);
-        fprintf(stderr, "  [+] Substitutions gamma .......... %.2lf\n",
-        P->model[n].eGamma);
+        fprintf(stderr, "  [+] Using inversions ............. %s\n",                    
+        P->model[n].eIr == 1 ? "yes" : "no");
         }
       }
 
-  if(P->ref != NULL)
-    fprintf(stderr, "Reference filename ................. %s\n", P->ref);
+  for(n = 0 ; n < P->nModels ; ++n)
+    if(P->model[n].copy == 1){
+      fprintf(stderr, "Repeat model %d:\n", n+1);
+      fprintf(stderr, "  [+] Maximum number of repeats .... %u\n",
+      P->model[n].nr);
+      fprintf(stderr, "  [+] Context order ................ %u\n",
+      P->model[n].ctx);
+      fprintf(stderr, "  [+] Alpha ........................ %.3lf\n",
+      P->model[n].alpha);
+      fprintf(stderr, "  [+] Beta ......................... %.3lf\n",
+      P->model[n].beta);
+      fprintf(stderr, "  [+] Gamma ........................ %.3lf\n", 
+      P->model[n].gamma);
+      fprintf(stderr, "  [+] Limit ........................ %u\n",
+      P->model[n].limit);
+      fprintf(stderr, "  [+] Using inversions ............. %s\n",
+      P->model[n].ir == 1 ? "yes" : "no");
+      }
+
   fprintf(stderr, "Target files (%u):\n", P->nTar);
   for(n = 0 ; n < P->nTar ; ++n)
     fprintf(stderr, "  [+] Filename %-2u .................. %s\n", n + 1, 

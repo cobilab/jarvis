@@ -18,15 +18,16 @@ typedef struct{
   uint32_t ctx;
   uint32_t den;
   uint32_t ir;
+  uint32_t eIr;
   uint32_t edits;
   uint32_t eDen;
+  double   eGamma;
   uint8_t  type;
   double   alpha;
   double   beta;
   int32_t  limit;
   int32_t  copy;
   double   gamma;
-  double   eGamma;
   }
 ModelPar;
 
@@ -65,7 +66,7 @@ uint32_t garbage;
 #define DEFAULT_HELP           0
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
-#define DEFAULT_LEVEL          5
+#define DEFAULT_LEVEL          1
 #define MAX_LEVEL              15
 #define MIN_LEVEL              1
 #define MAX_CTX                20
