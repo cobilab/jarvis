@@ -66,9 +66,9 @@ void Hit(TOLERANT *T){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateTolerantModel(TOLERANT *T, PModel *P, uint8_t sym){
+void UpdateTolerantModel(TOLERANT *T, PMODEL *PM, uint8_t sym){
 
-  int32_t best = BestId(P->freqs, P->sum, T->nSym);
+  int32_t best = BestId(PM->freqs, PM->sum, T->nSym);
 
   switch(best){
     case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]

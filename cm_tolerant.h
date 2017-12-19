@@ -2,7 +2,7 @@
 #define CM_TOLERANT_H_INCLUDED
 
 #include "defs.h"
-#include "cm_pmodels.h"
+#include "pmodels.h"
 #include "buffer.h"
 
 typedef struct{
@@ -22,7 +22,7 @@ TOLERANT;
 
 TOLERANT     *CreateTolerantModel     (uint32_t, uint32_t, uint32_t, uint32_t);
 int32_t      BestId                   (uint32_t *, uint32_t, uint32_t);
-void         UpdateTolerantModel      (TOLERANT *, PModel *, uint8_t);
+void         UpdateTolerantModel      (TOLERANT *, PMODEL *, uint8_t);
 void         Fail                     (TOLERANT *);
 void         Hit                      (TOLERANT *);
 void         RemoveTolerantModel      (TOLERANT *);

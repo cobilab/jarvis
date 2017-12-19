@@ -3,9 +3,9 @@
 
 #include "defs.h"
 #include "buffer.h"
+#include "pmodels.h"
 #include "cm_hash.h"
 #include "cm_array.h"
-#include "cm_pmodels.h"
 #include "cm_tolerant.h"
 
 #define ARRAY_MODE            0
@@ -42,9 +42,9 @@ void            ResetCModelIdx       (CModel *);
 void            UpdateCModelCounter  (CModel *, uint32_t, uint64_t);
 CModel          *CreateCModel        (uint32_t, uint32_t, uint8_t, uint32_t, 
                                       uint32_t, uint32_t, double, double);
-void            ComputePModel        (CModel *, PModel *, uint64_t, uint32_t);
+void            ComputePModel        (CModel *, PMODEL *, uint64_t, uint32_t);
 void            RemoveCModel         (CModel *);
-double          PModelSymbolNats     (PModel *, uint32_t);
+double          PModelSymbolNats     (PMODEL *, uint32_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

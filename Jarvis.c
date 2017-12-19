@@ -21,6 +21,7 @@
 #include "args.h"
 #include "repeats.h"
 #include "cm.h"
+#include "pmodels.h"
 #include "files.h"
 #include "strings.h"
 #include "mem.h"
@@ -102,7 +103,12 @@ void Compress(Parameters *P, char *fn){
   uint32_t m, n; 
   uint8_t  t[NSYM], *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)), 
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
-  PMODEL   *MX = CreatePM(NSYM);
+  CModel   **CM;
+  PMODEL   **PM;
+  PMODEL   *MX = CreatePModel(4);
+  FPMODEL  *PT;
+  CMWEIGHT *WM;
+
   srand(0);
 
   int32_t rep_idx = 0;
@@ -111,8 +117,45 @@ void Compress(Parameters *P, char *fn){
                        P->model[rep_idx].ctx,   P->model[rep_idx].gamma,
                        P->model[rep_idx].ir);
 
+  if(P->verbose)
+    fprintf(stderr, "Analyzing data and creating models ...\n");
+
+  #ifdef ESTIMATE
+  FILE *IAE = NULL;
+  char *IAEName = NULL;
+  if(P->estim == 1){
+    IAEName = concatenate(P->tar[id], ".iae");
+    IAE = Fopen(IAEName, "w");
+    }
+  #endif
+
+  // EXTRA MODELS DERIVED FROM TOLERANT CONTEXT MODELS
+  int32_t totModels = P->nModels;
+  for(n = 0 ; n < P->nModels ; ++n)
+    if(P->model[n].edits != 0){
+      totModels++;
+      }
+
+  PM      = (PMODEL  **) Calloc(totModels, sizeof(PMODEL *));
+  for(n = 0 ; n < totModels ; ++n)
+    PM[n] = CreatePModel(4);
+  MX      = CreatePModel(4);
+  PT      = CreateFloatPModel(4);
+  WM      = CreateWeightModel(totModels);
+
+  CM = (CModel **) Malloc(P->nModels * sizeof(CModel *));
+  for(n = 0 ; n < P->nModels ; ++n)
+    CM[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 1, P->model[n].edits, 
+            P->model[n].eDen, 4, P->model[n].gamma, P->model[n].eGamma);
+
   C->length = NBytesInFile(IN);
   C->size   = C->length>>2;
+
+  if(P->verbose){
+    fprintf(stderr, "Done!\n");
+    fprintf(stderr, "Compressing %"PRIu64" symbols ...\n", C->size);
+    }
+
 
   startoutputtingbits();
   start_encode();
@@ -161,7 +204,7 @@ void Decompress(char *fn){
   uint32_t m, n;
   uint8_t  *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)),
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
-  PMODEL   *MX = CreatePM(NSYM);
+  PMODEL   *MX = CreatePModel(NSYM);
   srand(0);
 
   startinputtingbits();

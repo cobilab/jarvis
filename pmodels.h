@@ -1,19 +1,45 @@
-#ifndef PMODELS_H_INCLUDED
-#define PMODELS_H_INCLUDED
+#ifndef CM_PMODELS_H_INCLUDED
+#define CM_PMODELS_H_INCLUDED
 
 #include "defs.h"
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#define MX_PMODEL      65535
+#define DEFAULT_GAMMA  0.90
 
 typedef struct{
-  uint32_t *freqs;
-  uint32_t sum;
+  uint32_t  *freqs;
+  uint32_t  sum;
   }
 PMODEL;
 
+typedef struct{
+  double    *freqs;
+  int32_t   nSym;
+  }
+FPMODEL;
+
+typedef struct{
+  uint32_t  totModels;
+  double    *weight;
+  double    *gamma;
+  double    totalWeight;
+  }
+CMWEIGHT;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-PMODEL *CreatePM   (uint32_t);
+PMODEL      *CreatePModel        (uint32_t);
+FPMODEL     *CreateFloatPModel   (uint32_t);
+void        RemovePModel         (PMODEL *);
+void        RemoveFPModel        (FPMODEL *);
+void        ComputeMXProbs       (FPMODEL *, PMODEL *, uint32_t);
+void        ComputeWeightedFreqs (double, PMODEL *, FPMODEL *, uint32_t);
+CMWEIGHT    *CreateWeightModel   (uint32_t);
+void        ResetWeightModel     (CMWEIGHT *);
+void        RenormalizeWeights   (CMWEIGHT *);
+void        CalcDecayment        (CMWEIGHT *, PMODEL **, uint8_t);
+void        RemoveWeightModel    (CMWEIGHT *);
+double      PModelSymbolNats     (PMODEL *, uint32_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -81,7 +81,7 @@ uint64_t GetPModelIdxCorr(uint8_t *p, CModel *M, uint64_t idx){
  
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
+void ComputePModel(CModel *M, PMODEL *PM, uint64_t idx, uint32_t aDen){
   ACC *ac;
   HCC *hc;
   uint32_t x;
@@ -90,22 +90,21 @@ void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
     case HASH_TABLE_MODE:
       if(!(hc = GetHCCounters(M->HT, idx)))
         hc = (HCC *) M->HT->zeroCounters;
-      P->sum = 0;
+      PM->sum = 0;
       for(x = 0 ; x < M->nSym ; ++x){
-        P->freqs[x] = 1 + aDen * hc[x];
-        P->sum += P->freqs[x];
+        PM->freqs[x] = 1 + aDen * hc[x];
+        PM->sum += PM->freqs[x];
         }
     break;
 
     case ARRAY_MODE:
       ac = &M->AT->counters[idx*M->nSym];
-      P->sum = 0;
+      PM->sum = 0;
       for(x = 0 ; x < M->nSym ; ++x){
-        P->freqs[x] = 1 + aDen * ac[x];
-        P->sum += P->freqs[x];
+        PM->freqs[x] = 1 + aDen * ac[x];
+        PM->sum += PM->freqs[x];
         }
     break;
-
 
     default:
     fprintf(stderr, "Error: not implemented!\n");
@@ -132,7 +131,7 @@ void RemoveCModel(CModel *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-double PModelSymbolNats(PModel *P, uint32_t s){
+double PModelSymbolNats(PMODEL *P, uint32_t s){
   return log((double) P->sum / P->freqs[s]);
   }
 
