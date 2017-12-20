@@ -103,19 +103,14 @@ void Compress(Parameters *P, char *fn){
   uint32_t m, n; 
   uint8_t  t[NSYM], *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)), 
            *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
+  RCLASS   **RC;
   CModel   **CM;
   PMODEL   **PM;
-  PMODEL   *MX = CreatePModel(4);
+  PMODEL   *MX;
   FPMODEL  *PT;
   CMWEIGHT *WM;
 
   srand(0);
-
-  int32_t rep_idx = 0;
-  RCLASS *C = CreateRC(P->model[rep_idx].nr,    P->model[rep_idx].alpha,
-                       P->model[rep_idx].beta,  P->model[rep_idx].limit,
-                       P->model[rep_idx].ctx,   P->model[rep_idx].gamma,
-                       P->model[rep_idx].ir);
 
   if(P->verbose)
     fprintf(stderr, "Analyzing data and creating models ...\n");
@@ -132,9 +127,8 @@ void Compress(Parameters *P, char *fn){
   // EXTRA MODELS DERIVED FROM TOLERANT CONTEXT MODELS
   int32_t totModels = P->nModels;
   for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].edits != 0){
+    if(P->model[n].edits != 0)
       totModels++;
-      }
 
   PM      = (PMODEL  **) Calloc(totModels, sizeof(PMODEL *));
   for(n = 0 ; n < totModels ; ++n)
@@ -143,10 +137,20 @@ void Compress(Parameters *P, char *fn){
   PT      = CreateFloatPModel(4);
   WM      = CreateWeightModel(totModels);
 
+  RC = (RCLASS **) Malloc(P->nModels * sizeof(RCLASS *));
+  for(n = 0 ; n < P->nModels ; ++n)
+    if(P->model[n].repeat == 1)
+      RC[n] = CreateRC(P->model[n].nr,    P->model[n].alpha, P->model[n].beta,  
+                       P->model[n].limit, P->model[n].ctx,   P->model[n].gamma,
+                       P->model[n].ir);
+
+
   CM = (CModel **) Malloc(P->nModels * sizeof(CModel *));
   for(n = 0 ; n < P->nModels ; ++n)
-    CM[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 1, P->model[n].edits, 
-            P->model[n].eDen, 4, P->model[n].gamma, P->model[n].eGamma);
+    if(P->model[n].repeat == 0)
+      CM[n] = CreateCModel(P->model[n].ctx,   P->model[n].den,  1, 
+                           P->model[n].edits, P->model[n].eDen, 4, 
+                           P->model[n].gamma, P->model[n].eGamma);
 
   C->length = NBytesInFile(IN);
   C->size   = C->length>>2;
@@ -159,20 +163,26 @@ void Compress(Parameters *P, char *fn){
 
   startoutputtingbits();
   start_encode();
-  EncodeHeader(C, OUT);
+  EncodeHeader(RC, OUT);
 
   while((m = fread(t, sizeof(uint8_t), NSYM, IN)) == NSYM){
     buf[i] = S2N(t[3])|(S2N(t[2])<<2)|(S2N(t[1])<<4)|(S2N(t[0])<<6); // PACK 4
     
     for(n = 0 ; n < m ; ++n){
       sym = S2N(t[n]);
-      StopRM(C);
-      StartMultipleRMs(C, cache+SCACHE-1);
-      InsertKmerPos(C, C->P->idx, pos++);                    // pos = (i<<2)+n
-      RenormWeights(C);
-      ComputeMixture(C, MX, buf);
+      for(r = 0 ; r < nr ; ++r){
+        StopRM(RC[n]);
+        StartMultipleRMs(RC[n], cache+SCACHE-1);
+        InsertKmerPos(C, C->P->idx, pos++);                    // pos = (i<<2)+n
+        RenormWeights(C);
+        ComputeMixture(C, MX, buf);
+        }
+
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, OUT);
-      UpdateWeights(C, buf, sym);
+
+      for(r = 0 ; r < nr ; ++r)
+        UpdateWeights(C, buf, sym);
+
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
 
@@ -297,20 +307,20 @@ int main(int argc, char **argv){
 
   k = 0;
   for(n = 1 ; n < argc ; ++n)
-    if(strcmp(argv[n], "-cm") == 0)
-      P->model[k++] = ArgsUniqCModel(argv[n+1], 0);
-  if(P->level != 0){
-    for(n = 1 ; n < xargc ; ++n)
-      if(strcmp(xargv[n], "-cm") == 0)
-        P->model[k++] = ArgsUniqCModel(xargv[n+1], 0);
-    }
-  for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-rm") == 0)
       P->model[k++] = ArgsUniqRModel(argv[n+1], 0);
   if(P->level != 0){
     for(n = 1 ; n < xargc ; ++n)
       if(strcmp(xargv[n], "-rm") == 0)
         P->model[k++] = ArgsUniqRModel(xargv[n+1], 0);
+    }
+  for(n = 1 ; n < argc ; ++n)
+    if(strcmp(argv[n], "-cm") == 0)
+      P->model[k++] = ArgsUniqCModel(argv[n+1], 0);
+  if(P->level != 0){
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-cm") == 0)
+        P->model[k++] = ArgsUniqCModel(xargv[n+1], 0);
     }
 
   P->nTar = ReadFNames(P, argv[argc-1]);
