@@ -33,64 +33,77 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // DECODE HEADER AN CREATE REPEAT CLASS
 //
-RCLASS *DecodeHeader(FILE *F){
-  uint64_t s, w;
-  uint32_t m, l, c;
-  double   a, b, g;
-  uint8_t  r;
-  RCLASS   *C;
-  s = ReadNBits(64, F);
-  w = ReadNBits(64, F);
-  m = ReadNBits(32, F);
-  a = ReadNBits(16, F) / 65535.0;
-  b = ReadNBits(16, F) / 65535.0;
-  g = ReadNBits(16, F) / 65535.0;
-  l = ReadNBits(16, F);
-  c = ReadNBits(16, F);
-  r = ReadNBits( 1, F);
-  C = CreateRC(m, a, b, l, c, g, r);
-  C->size   = s;
-  C->length = w;
+void DecodeHeader(Parameters *P, RCLASS **RC, FILE *F){
+  uint32_t n;
+
+  P->size   = ReadNBits(64, F);
+  P->length = ReadNBits(64, F);
+  P->nrc    = ReadNBits(32, F);
+ 
+  RC = (RCLASS **) Realloc(RC, P->nrc * sizeof(RCLASS *));
+
+  for(n = 0 ; n < P->nrc ; ++n){ 
+    uint32_t  m = ReadNBits(32, F);
+    double    a = ReadNBits(16, F) / 65535.0;
+    double    b = ReadNBits(16, F) / 65535.0;
+    double    g = ReadNBits(16, F) / 65535.0;
+    uint32_t  l = ReadNBits(16, F);
+    uint32_t  c = ReadNBits(16, F);
+    uint8_t   r = ReadNBits( 1, F);
+    RC[n] = CreateRC(m, a, b, l, c, g, r);
+    }
 
   #ifdef DEBUG
-  printf("size    = %"PRIu64"\n", C->size);
-  printf("length  = %"PRIu64"\n", C->length);
-  printf("max rep = %u\n",        C->mRM);
-  printf("alpha   = %g\n",        C->P->alpha);
-  printf("beta    = %g\n",        C->P->beta);
-  printf("gamma   = %g\n",        C->P->gamma);
-  printf("limit   = %u\n",        C->P->limit);
-  printf("ctx     = %u\n",        C->P->ctx);
-  printf("ir      = %u\n",        C->P->rev);
+  printf("size    = %"PRIu64"\n", P->size);
+  printf("length  = %"PRIu64"\n", P->length);
+  printf("n class = %u\n",        P->nrc);
+  for(n = 0 ; n < P->nrc ; ++n){
+    printf("  class %u\n",        n);
+    printf("    max rep = %u\n",  RC[n]->mRM);
+    printf("    alpha   = %g\n",  RC[n]->P->alpha);
+    printf("    beta    = %g\n",  RC[n]->P->beta);
+    printf("    gamma   = %g\n",  RC[n]->P->gamma);
+    printf("    limit   = %u\n",  RC[n]->P->limit);
+    printf("    ctx     = %u\n",  RC[n]->P->ctx);
+    printf("    ir      = %u\n",  RC[n]->P->rev);
+    }
   #endif
-
-  return C;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // ENCODE HEADER
 //
-void EncodeHeader(RCLASS *C, FILE *F){
-  WriteNBits(C->size,                       64, F);
-  WriteNBits(C->length,                     64, F);
-  WriteNBits(C->mRM,                        32, F);
-  WriteNBits((uint16_t)(C->P->alpha*65535), 16, F);
-  WriteNBits((uint16_t)(C->P->beta *65535), 16, F);
-  WriteNBits((uint16_t)(C->P->gamma*65535), 16, F);
-  WriteNBits(C->P->limit,                   16, F);
-  WriteNBits(C->P->ctx,                     16, F);
-  WriteNBits(C->P->rev,                      1, F);
+void EncodeHeader(Parameters *P, RCLASS **RC, FILE *F){
+  uint32_t n;
+
+  WriteNBits(P->size,                             64, F);
+  WriteNBits(P->length,                           64, F);
+  WriteNBits(P->nrc,                              32, F);
+
+  for(n = 0 ; n < P->nrc ; ++n){
+    WriteNBits(RC[n]->mRM,                        32, F);
+    WriteNBits((uint16_t)(RC[n]->P->alpha*65535), 16, F);
+    WriteNBits((uint16_t)(RC[n]->P->beta *65535), 16, F);
+    WriteNBits((uint16_t)(RC[n]->P->gamma*65535), 16, F);
+    WriteNBits(RC[n]->P->limit,                   16, F);
+    WriteNBits(RC[n]->P->ctx,                     16, F);
+    WriteNBits(RC[n]->P->rev,                      1, F);
+    }
   
   #ifdef DEBUG
-  printf("size    = %"PRIu64"\n", C->size);
-  printf("length  = %"PRIu64"\n", C->length);
-  printf("max rep = %u\n",        C->mRM);
-  printf("alpha   = %g\n",        C->P->alpha);
-  printf("beta    = %g\n",        C->P->beta);
-  printf("gamma   = %g\n",        C->P->gamma);
-  printf("limit   = %u\n",        C->P->limit);
-  printf("ctx     = %u\n",        C->P->ctx);
-  printf("ir      = %u\n",        C->P->rev);
+  printf("size    = %"PRIu64"\n", P->size);
+  printf("length  = %"PRIu64"\n", P->length);
+  printf("n class = %u\n",        P->nrc);
+  for(n = 0 ; n < P->nrc ; ++n){
+    printf("  class %u\n",        n);
+    printf("    max rep = %u\n",  RC[n]->mRM);
+    printf("    alpha   = %g\n",  RC[n]->P->alpha);
+    printf("    beta    = %g\n",  RC[n]->P->beta);
+    printf("    gamma   = %g\n",  RC[n]->P->gamma);
+    printf("    limit   = %u\n",  RC[n]->P->limit);
+    printf("    ctx     = %u\n",  RC[n]->P->ctx);
+    printf("    ir      = %u\n",  RC[n]->P->rev);
+    }
   #endif
   }
 
@@ -99,10 +112,10 @@ void EncodeHeader(RCLASS *C, FILE *F){
 //
 void Compress(Parameters *P, char *fn){
   FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
-  uint64_t i = 0, mSize = MAX_BUF, pos = 0;
+  uint64_t i = 0, mSize = MAX_BUF, pos = 0, r = 0;
   uint32_t m, n; 
-  uint8_t  t[NSYM], *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)), 
-           *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
+  uint8_t  t[NSYM], *buf   = (uint8_t *) Calloc(mSize,    sizeof(uint8_t)), 
+           sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t));
   RCLASS   **RC;
   CModel   **CM;
   PMODEL   **PM;
@@ -132,56 +145,56 @@ void Compress(Parameters *P, char *fn){
 
   PM      = (PMODEL  **) Calloc(totModels, sizeof(PMODEL *));
   for(n = 0 ; n < totModels ; ++n)
-    PM[n] = CreatePModel(4);
-  MX      = CreatePModel(4);
-  PT      = CreateFloatPModel(4);
+    PM[n] = CreatePModel(NSYM);
+  MX      = CreatePModel(NSYM);
+  PT      = CreateFloatPModel(NSYM);
   WM      = CreateWeightModel(totModels);
 
-  RC = (RCLASS **) Malloc(P->nModels * sizeof(RCLASS *));
-  for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].repeat == 1)
-      RC[n] = CreateRC(P->model[n].nr,    P->model[n].alpha, P->model[n].beta,  
-                       P->model[n].limit, P->model[n].ctx,   P->model[n].gamma,
-                       P->model[n].ir);
-
+  RC = (RCLASS **) Malloc(P->nrc * sizeof(RCLASS *));
+  for(n = 0 ; n < P->nrc ; ++n)
+    RC[n] = CreateRC(P->model[n].nr,    P->model[n].alpha, P->model[n].beta,  
+                     P->model[n].limit, P->model[n].ctx,   P->model[n].gamma,
+                     P->model[n].ir);
 
   CM = (CModel **) Malloc(P->nModels * sizeof(CModel *));
   for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].repeat == 0)
+    if(P->model[n].copy == 0)
       CM[n] = CreateCModel(P->model[n].ctx,   P->model[n].den,  1, 
-                           P->model[n].edits, P->model[n].eDen, 4, 
+                           P->model[n].edits, P->model[n].eDen, NSYM, 
                            P->model[n].gamma, P->model[n].eGamma);
 
-  C->length = NBytesInFile(IN);
-  C->size   = C->length>>2;
+  P->length = NBytesInFile(IN);
+  P->size   = P->length>>2;
 
   if(P->verbose){
     fprintf(stderr, "Done!\n");
-    fprintf(stderr, "Compressing %"PRIu64" symbols ...\n", C->size);
+    fprintf(stderr, "Compressing %"PRIu64" symbols ...\n", P->size);
     }
-
 
   startoutputtingbits();
   start_encode();
-  EncodeHeader(RC, OUT);
+  EncodeHeader(P, RC, OUT);
 
   while((m = fread(t, sizeof(uint8_t), NSYM, IN)) == NSYM){
     buf[i] = S2N(t[3])|(S2N(t[2])<<2)|(S2N(t[1])<<4)|(S2N(t[0])<<6); // PACK 4
     
     for(n = 0 ; n < m ; ++n){
       sym = S2N(t[n]);
-      for(r = 0 ; r < nr ; ++r){
-        StopRM(RC[n]);
-        StartMultipleRMs(RC[n], cache+SCACHE-1);
-        InsertKmerPos(C, C->P->idx, pos++);                    // pos = (i<<2)+n
-        RenormWeights(C);
-        ComputeMixture(C, MX, buf);
+
+      for(r = 0 ; r < P->nrc ; ++r){
+        StopRM           (RC[r]);
+        StartMultipleRMs (RC[r], cache+SCACHE-1);
+        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
+        RenormWeights    (RC[r]);
+        ComputeMixture   (RC[r], MX, buf);
         }
+
+      ++pos;
 
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, OUT);
 
-      for(r = 0 ; r < nr ; ++r)
-        UpdateWeights(C, buf, sym);
+      for(r = 0 ; r < P->nrc ; ++r)
+        UpdateWeights    (RC[r], buf, sym);
 
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
@@ -189,18 +202,19 @@ void Compress(Parameters *P, char *fn){
     if(++i == mSize)    // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
       buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
-    Progress(C->size, i); 
+    Progress(P->size, i); 
     }
 
   WriteNBits(m, 8, OUT);
   for(n = 0 ; n < m ; ++n)
     WriteNBits(S2N(t[n]), 8, OUT);        // ENCODE REMAINING SYMBOLS
 
-  fprintf(stderr, "Compression: %"PRIu64" -> %"PRIu64" ( %.6g )\n", C->length, 
-  (uint64_t) _bytes_output, (double) _bytes_output * 8.0 / C->length);
+  fprintf(stderr, "Compression: %"PRIu64" -> %"PRIu64" ( %.6g )\n", P->length, 
+  (uint64_t) _bytes_output, (double) _bytes_output * 8.0 / P->length);
 
   finish_encode(OUT);
   doneoutputtingbits(OUT);
+
   fclose(IN);
   fclose(OUT);
   }
@@ -209,36 +223,48 @@ void Compress(Parameters *P, char *fn){
 // DECOMPRESSION
 //
 void Decompress(char *fn){
-  FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jd"), "w");
-  uint64_t i = 0, mSize = MAX_BUF, pos = 0;
-  uint32_t m, n;
-  uint8_t  *buf = (uint8_t *) Calloc(mSize, sizeof(uint8_t)),
-           *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
-  PMODEL   *MX = CreatePModel(NSYM);
+  FILE       *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jd"), "w");
+  uint64_t   i = 0, mSize = MAX_BUF, pos = 0;
+  uint32_t   m, n, r;
+  uint8_t    *buf   = (uint8_t *)    Calloc(mSize,    sizeof(uint8_t)),
+             *cache = (uint8_t *)    Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
+  RCLASS     **RC   = (RCLASS **)    Malloc(1 *       sizeof(RCLASS *));
+  Parameters *P     = (Parameters *) Malloc(1 *       sizeof(Parameters));
+  PMODEL     *MX    =  CreatePModel(NSYM);
+
   srand(0);
 
   startinputtingbits();
   start_decode(IN);
-  RCLASS *C = DecodeHeader(IN);
+  DecodeHeader(P, RC, IN);
 
-  while(i < C->size){                         // NOT absolute size (CHAR SIZE)
+  while(i < P->size){                         // NOT absolute size (CHAR SIZE)
     for(n = 0 ; n < NSYM ; ++n){
-      StopRM(C);
-      StartMultipleRMs(C, cache+SCACHE-1);
-      InsertKmerPos(C, C->P->idx, pos++);                    // pos = (i<<2)+n
-      RenormWeights(C);
-      ComputeMixture(C, MX, buf);
+
+      for(r = 0 ; r < P->nrc ; ++r){
+        StopRM           (RC[r]);
+        StartMultipleRMs (RC[r], cache+SCACHE-1);
+        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
+        RenormWeights    (RC[r]);
+        ComputeMixture   (RC[r], MX, buf);
+        }
+
+      ++pos;
+
       sym = ArithDecodeSymbol(NSYM, (int *) MX->freqs, (int) MX->sum, IN);
       if(n == 0) buf[i] = sym<<6 ; else buf[i] |= (sym<<((3-n)<<1));
       fputc(N2S(sym), OUT);
-      UpdateWeights(C, buf, sym);
+
+      for(r = 0 ; r < P->nrc ; ++r)
+        UpdateWeights    (RC[r], buf, sym);
+
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
 
     if(++i == mSize) // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
       buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
-    Progress(C->size, i);
+    Progress(P->size, i);
     }
 
   m = ReadNBits(8, IN);
@@ -247,6 +273,7 @@ void Decompress(char *fn){
 
   finish_decode();
   doneinputtingbits();
+
   fclose(IN);
   fclose(OUT);
   }
@@ -314,6 +341,8 @@ int main(int argc, char **argv){
       if(strcmp(xargv[n], "-rm") == 0)
         P->model[k++] = ArgsUniqRModel(xargv[n+1], 0);
     }
+  P->nrc = k;
+
   for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-cm") == 0)
       P->model[k++] = ArgsUniqCModel(argv[n+1], 0);

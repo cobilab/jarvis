@@ -44,10 +44,12 @@ typedef struct{
   char     **tar;
   uint8_t  nTar;
   uint64_t checksum;
-  uint64_t size;
   uint32_t watermark;
   double   gamma;
   uint32_t nModels;
+  uint64_t length;
+  uint64_t size;
+  uint32_t nrc; // NUMBER OF REPEAT CLASSES
   }
 Parameters;
 
