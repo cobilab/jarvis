@@ -31,19 +31,19 @@ typedef struct{
   uint32_t   edits;         // EDITS
   uint32_t   nSym;          // EDITS
   }
-CModel;
+CMODEL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void            GetPModelIdx         (uint8_t *, CModel *);
-uint8_t         GetPModelIdxIR       (uint8_t *, CModel *);
-uint64_t        GetPModelIdxCorr     (uint8_t *, CModel *, uint64_t);
-void            ResetCModelIdx       (CModel *);
-void            UpdateCModelCounter  (CModel *, uint32_t, uint64_t);
-CModel          *CreateCModel        (uint32_t, uint32_t, uint8_t, uint32_t, 
+void            GetPModelIdx         (uint8_t *, CMODEL *);
+uint8_t         GetPModelIdxIR       (uint8_t *, CMODEL *);
+uint64_t        GetPModelIdxCorr     (uint8_t *, CMODEL *, uint64_t);
+void            ResetCModelIdx       (CMODEL *);
+void            UpdateCModelCounter  (CMODEL *, uint32_t, uint64_t);
+CMODEL          *CreateCModel        (uint32_t, uint32_t, uint8_t, uint32_t, 
                                       uint32_t, uint32_t, double, double);
-void            ComputePModel        (CModel *, PMODEL *, uint64_t, uint32_t);
-void            RemoveCModel         (CModel *);
+void            ComputePModel        (CMODEL *, PMODEL *, uint64_t, uint32_t);
+void            RemoveCModel         (CMODEL *);
 double          PModelSymbolNats     (PMODEL *, uint32_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

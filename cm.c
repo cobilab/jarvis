@@ -11,9 +11,9 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-CModel *CreateCModel(uint32_t ctx, uint32_t aDen, uint8_t ref, uint32_t edits, 
+CMODEL *CreateCModel(uint32_t ctx, uint32_t aDen, uint8_t ref, uint32_t edits, 
 uint32_t eDen, uint32_t nSym, double gamma, double eGamma){
-  CModel    *M = (CModel *) Calloc(1, sizeof(CModel));
+  CMODEL    *M = (CMODEL *) Calloc(1, sizeof(CMODEL));
   uint64_t  prod = 1, *mult;
   uint32_t  n;
 
@@ -55,33 +55,33 @@ uint32_t eDen, uint32_t nSym, double gamma, double eGamma){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ResetCModelIdx(CModel *M){
+void ResetCModelIdx(CMODEL *M){
   M->pModelIdx   = 0;
   M->pModelIdxIR = M->nPModels - 1;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void GetPModelIdx(uint8_t *p, CModel *M){
+void GetPModelIdx(uint8_t *p, CMODEL *M){
   M->pModelIdx = ((M->pModelIdx-*(p-M->ctx)*M->multiplier)*M->nSym)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint8_t GetPModelIdxIR(uint8_t *p, CModel *M){
+uint8_t GetPModelIdxIR(uint8_t *p, CMODEL *M){
   M->pModelIdxIR = (M->pModelIdxIR>>2)+CompNum(*p)*M->multiplier;
   return CompNum(*(p-M->ctx));
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint64_t GetPModelIdxCorr(uint8_t *p, CModel *M, uint64_t idx){
+uint64_t GetPModelIdxCorr(uint8_t *p, CMODEL *M, uint64_t idx){
   return (((idx-*(p-M->ctx)*M->multiplier)*M->nSym)+*p);
   }
  
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *M, PMODEL *PM, uint64_t idx, uint32_t aDen){
+void ComputePModel(CMODEL *M, PMODEL *PM, uint64_t idx, uint32_t aDen){
   ACC *ac;
   HCC *hc;
   uint32_t x;
@@ -114,14 +114,14 @@ void ComputePModel(CModel *M, PMODEL *PM, uint64_t idx, uint32_t aDen){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateCModelCounter(CModel *M, uint32_t sym, uint64_t idx){
+void UpdateCModelCounter(CMODEL *M, uint32_t sym, uint64_t idx){
   if(M->mode == HASH_TABLE_MODE) UpdateHashCounter (M->HT, sym, idx);
   else                           UpdateArrayCounter(M->AT, sym, idx);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void RemoveCModel(CModel *M){
+void RemoveCModel(CMODEL *M){
   if(M->mode == HASH_TABLE_MODE) RemoveHashTable (M->HT);
   else                           RemoveArrayTable(M->AT);
 

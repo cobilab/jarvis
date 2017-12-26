@@ -29,7 +29,7 @@ RCLASS *CreateRC(uint32_t m, double a, double b, uint32_t l, uint32_t c,
 double g, uint8_t i){
   RCLASS *C     = (RCLASS   *) Calloc(1,     sizeof(RCLASS  ));
   C->hash       = (RHASH    *) Calloc(1,     sizeof(RHASH   ));
-  C->P          = (PARAM    *) Calloc(1,     sizeof(PARAM   ));
+  C->P          = (RPARAM   *) Calloc(1,     sizeof(RPARAM  ));
   C->hash->ent  = (RENTRY  **) Calloc(HSIZE, sizeof(RENTRY *));
   C->hash->size = (uint16_t *) Calloc(HSIZE, sizeof(uint16_t));
   C->RM         = (RMODEL   *) Calloc(m,     sizeof(RMODEL  ));

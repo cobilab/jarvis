@@ -16,42 +16,49 @@
 typedef struct{
   uint32_t nr;
   uint32_t ctx;
+  uint32_t ir;
+  double   alpha;
+  double   beta;
+  int32_t  limit;
+  double   gamma;
+  }
+RModelPar;
+
+typedef struct{
+  uint32_t ctx;
   uint32_t den;
   uint32_t ir;
+  double   gamma;
   uint32_t eIr;
   uint32_t edits;
   uint32_t eDen;
   double   eGamma;
   uint8_t  type;
-  double   alpha;
-  double   beta;
-  int32_t  limit;
-  int32_t  copy;
-  double   gamma;
   }
-ModelPar;
+CModelPar;
 
 typedef struct{
-  uint8_t  help;
-  uint8_t  verbose;
-  uint8_t  force;
-  uint8_t  estim;
-  uint8_t  level;
-  uint8_t  mode;
-  uint32_t col;
-  ModelPar *model;
-  char     *ref;
-  char     **tar;
-  uint8_t  nTar;
-  uint64_t checksum;
-  uint32_t watermark;
-  double   gamma;
-  uint32_t nModels;
-  uint64_t length;
-  uint64_t size;
-  uint32_t nrc; // NUMBER OF REPEAT CLASSES
+  uint8_t   help;
+  uint8_t   verbose;
+  uint8_t   force;
+  uint8_t   estim;
+  uint8_t   level;
+  uint8_t   mode;
+  uint32_t  col;
+  uint32_t  nModels;
+  uint32_t  nRPModels;
+  uint32_t  nCPModels;
+  uint32_t  nCModels;
+  uint32_t  nRModels;
+  CModelPar *cmodel;
+  RModelPar *rmodel;
+  char      **tar;
+  uint8_t   nTar;
+  uint32_t  watermark;
+  uint64_t  length;
+  uint64_t  size;
   }
-Parameters;
+PARAM;
 
 uint32_t garbage;
 

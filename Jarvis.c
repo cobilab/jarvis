@@ -14,6 +14,7 @@
 #include <time.h>
 #include <malloc.h>
 #include <unistd.h>
+
 #include "defs.h"
 #include "common.h"
 #include "levels.h"
@@ -33,16 +34,16 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // DECODE HEADER AN CREATE REPEAT CLASS
 //
-void DecodeHeader(Parameters *P, RCLASS **RC, FILE *F){
+void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   uint32_t n;
 
-  P->size   = ReadNBits(64, F);
-  P->length = ReadNBits(64, F);
-  P->nrc    = ReadNBits(32, F);
+  P->size     = ReadNBits(64, F);
+  P->length   = ReadNBits(64, F);
+  P->nRModels = ReadNBits(32, F);
  
-  RC = (RCLASS **) Realloc(RC, P->nrc * sizeof(RCLASS *));
+  RC = (RCLASS **) Realloc(RC, P->nRModels * sizeof(RCLASS *));
 
-  for(n = 0 ; n < P->nrc ; ++n){ 
+  for(n = 0 ; n < P->nRModels ; ++n){ 
     uint32_t  m = ReadNBits(32, F);
     double    a = ReadNBits(16, F) / 65535.0;
     double    b = ReadNBits(16, F) / 65535.0;
@@ -53,11 +54,26 @@ void DecodeHeader(Parameters *P, RCLASS **RC, FILE *F){
     RC[n] = CreateRC(m, a, b, l, c, g, r);
     }
 
+  CM = (CMODEL **) Realloc(CM, P->nCModels * sizeof(CMODEL *));
+
+  for(n = 0 ; n < P->nRModels ; ++n){
+/*
+    uint32_t  m = ReadNBits(32, F);
+    double    a = ReadNBits(16, F) / 65535.0;
+    double    b = ReadNBits(16, F) / 65535.0;
+    double    g = ReadNBits(16, F) / 65535.0;
+    uint32_t  l = ReadNBits(16, F);
+    uint32_t  c = ReadNBits(16, F);
+    uint8_t   r = ReadNBits( 1, F);
+    RC[n] = CreateRC(m, a, b, l, c, g, r);
+*/
+    }
+
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
-  printf("n class = %u\n",        P->nrc);
-  for(n = 0 ; n < P->nrc ; ++n){
+  printf("n class = %u\n",        P->nRModels);
+  for(n = 0 ; n < P->nRModels ; ++n){
     printf("  class %u\n",        n);
     printf("    max rep = %u\n",  RC[n]->mRM);
     printf("    alpha   = %g\n",  RC[n]->P->alpha);
@@ -73,14 +89,14 @@ void DecodeHeader(Parameters *P, RCLASS **RC, FILE *F){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // ENCODE HEADER
 //
-void EncodeHeader(Parameters *P, RCLASS **RC, FILE *F){
+void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   uint32_t n;
 
   WriteNBits(P->size,                             64, F);
   WriteNBits(P->length,                           64, F);
-  WriteNBits(P->nrc,                              32, F);
 
-  for(n = 0 ; n < P->nrc ; ++n){
+  WriteNBits(P->nRModels,                         32, F);
+  for(n = 0 ; n < P->nRModels ; ++n){
     WriteNBits(RC[n]->mRM,                        32, F);
     WriteNBits((uint16_t)(RC[n]->P->alpha*65535), 16, F);
     WriteNBits((uint16_t)(RC[n]->P->beta *65535), 16, F);
@@ -89,12 +105,25 @@ void EncodeHeader(Parameters *P, RCLASS **RC, FILE *F){
     WriteNBits(RC[n]->P->ctx,                     16, F);
     WriteNBits(RC[n]->P->rev,                      1, F);
     }
-  
+
+  // ADD CONTEXT MODELS
+  WriteNBits(P->nCModels,                         32, F);
+  for(n = 0 ; n < P->nCModels ; ++n){
+/*
+    WriteNBits((uint16_t)(RC[n]->P->alpha*65535), 16, F);
+    WriteNBits((uint16_t)(RC[n]->P->beta *65535), 16, F);
+    WriteNBits((uint16_t)(RC[n]->P->gamma*65535), 16, F);
+    WriteNBits(RC[n]->P->limit,                   16, F);
+    WriteNBits(RC[n]->P->ctx,                     16, F);
+    WriteNBits(RC[n]->P->rev,                      1, F);
+*/
+    }
+
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
-  printf("n class = %u\n",        P->nrc);
-  for(n = 0 ; n < P->nrc ; ++n){
+  printf("n class = %u\n",        P->nRModels);
+  for(n = 0 ; n < P->nRModels ; ++n){
     printf("  class %u\n",        n);
     printf("    max rep = %u\n",  RC[n]->mRM);
     printf("    alpha   = %g\n",  RC[n]->P->alpha);
@@ -110,7 +139,7 @@ void EncodeHeader(Parameters *P, RCLASS **RC, FILE *F){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // COMPRESSION
 //
-void Compress(Parameters *P, char *fn){
+void Compress(PARAM *P, char *fn){
   FILE      *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
   uint64_t  i = 0, mSize = MAX_BUF, pos = 0, r = 0;
   uint32_t  m, n, c; 
@@ -118,9 +147,11 @@ void Compress(Parameters *P, char *fn){
             sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)),
             *p;
   RCLASS    **RC;
-  CModel    **CM;
+  CMODEL    **CM;
   PMODEL    **PM;
   PMODEL    *MX;
+  PMODEL    *MX_CM;
+  PMODEL    *MX_RM;
   FPMODEL   *PT;
   CMWEIGHT  *WM;
   CBUF      *SB;
@@ -134,37 +165,38 @@ void Compress(Parameters *P, char *fn){
   FILE *IAE = NULL;
   char *IAEName = NULL;
   if(P->estim == 1){
-    IAEName = concatenate(P->tar[id], ".iae");
+    IAEName = concatenate(P->tar[id], ".info");
     IAE = Fopen(IAEName, "w");
     }
   #endif
 
   // EXTRA MODELS DERIVED FROM TOLERANT CONTEXT MODELS
-  int32_t totModels = P->nModels;
-  for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].edits != 0)
-      totModels++;
+  P->nCPModels = P->nCModels;
+  for(n = 0 ; n < P->nCModels ; ++n)
+    if(P->cmodel[n].edits != 0)
+      P->nCPModels++;
 
-  PM      = (PMODEL  **) Calloc(totModels, sizeof(PMODEL *));
-  for(n = 0 ; n < totModels ; ++n)
+  PM      = (PMODEL  **) Calloc(P->nCPModels, sizeof(PMODEL *));
+  for(n = 0 ; n < P->nCPModels ; ++n)
     PM[n] = CreatePModel(NSYM);
   MX      = CreatePModel(NSYM);
+  MX_RM   = CreatePModel(NSYM);
+  MX_CM   = CreatePModel(NSYM);
   PT      = CreateFloatPModel(NSYM);
-  WM      = CreateWeightModel(totModels);
+  WM      = CreateWeightModel(P->nCPModels);
   SB      = CreateCBuffer(BUFFER_SIZE, BGUARD);
 
-  RC = (RCLASS **) Malloc(P->nrc * sizeof(RCLASS *));
-  for(n = 0 ; n < P->nrc ; ++n)
-    RC[n] = CreateRC(P->model[n].nr,    P->model[n].alpha, P->model[n].beta,  
-                     P->model[n].limit, P->model[n].ctx,   P->model[n].gamma,
-                     P->model[n].ir);
+  RC = (RCLASS **) Malloc(P->nRModels * sizeof(RCLASS *));
+  for(n = 0 ; n < P->nRModels ; ++n)
+    RC[n] = CreateRC(P->rmodel[n].nr,    P->rmodel[n].alpha, P->rmodel[n].beta,  
+                     P->rmodel[n].limit, P->rmodel[n].ctx,   P->rmodel[n].gamma,
+                     P->rmodel[n].ir);
 
-  CM = (CModel **) Malloc(P->nModels * sizeof(CModel *));
-  for(n = 0 ; n < P->nModels ; ++n)
-    if(P->model[n].copy == 0)
-      CM[n] = CreateCModel(P->model[n].ctx,   P->model[n].den,  1, 
-                           P->model[n].edits, P->model[n].eDen, NSYM, 
-                           P->model[n].gamma, P->model[n].eGamma);
+  CM = (CMODEL **) Malloc(P->nCModels * sizeof(CMODEL *));
+  for(n = 0 ; n < P->nCModels ; ++n)
+    CM[n] = CreateCModel(P->cmodel[n].ctx,   P->cmodel[n].den,  1, 
+                         P->cmodel[n].edits, P->cmodel[n].eDen, NSYM, 
+                         P->cmodel[n].gamma, P->cmodel[n].eGamma);
 
   P->length = NBytesInFile(IN);
   P->size   = P->length>>2;
@@ -176,21 +208,21 @@ void Compress(Parameters *P, char *fn){
 
   startoutputtingbits();
   start_encode();
-  EncodeHeader(P, RC, OUT);
+  EncodeHeader(P, RC, CM, OUT);
 
   while((m = fread(t, sizeof(uint8_t), NSYM, IN)) == NSYM){
     buf[i] = S2N(t[3])|(S2N(t[2])<<2)|(S2N(t[1])<<4)|(S2N(t[0])<<6); // PACK 4
     
     for(n = 0 ; n < m ; ++n){
-      sym = S2N(t[n]);
 
-      SB->buf[SB->idx] = sym;
+      SB->buf[SB->idx] = sym = S2N(t[n]);
 
-      c = 0;
+      memset((void *)PT->freqs, 0, NSYM * sizeof(double));
       p = &SB->buf[SB->idx-1];
+      c = 0;
 
-      for(r = 0 ; r < P->nModels ; ++r){             // FOR ALL CONTEXT MODELS
-        CModel *FCM = CM[r];
+      for(r = 0 ; r < P->nCModels ; ++r){            // FOR ALL CONTEXT MODELS
+        CMODEL *FCM = CM[r];
         GetPModelIdx(p, FCM);
         ComputePModel(FCM, PM[c], FCM->pModelIdx, FCM->alphaDen);
         ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
@@ -204,23 +236,38 @@ void Compress(Parameters *P, char *fn){
           }
         ++c;
         }
-
-      ComputeMXProbs(PT, MX, NSYM);
+      ComputeMXProbs(PT, MX_CM, NSYM);
       
-      for(r = 0 ; r < P->nrc ; ++r){                  // FOR ALL REPEAT MODELS
+      for(r = 0 ; r < P->nRModels ; ++r){             // FOR ALL REPEAT MODELS
         StopRM           (RC[r]);
         StartMultipleRMs (RC[r], cache+SCACHE-1);
         InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
         RenormWeights    (RC[r]);
-        ComputeMixture   (RC[r], MX, buf);
+        ComputeMixture   (RC[r], MX_RM, buf);
         }
 
       ++pos;
 
-      AESym(sym, (int *)(MX->freqs), (int) MX->sum, OUT);
+      AESym(sym, (int *)(MX_RM->freqs), (int) MX_RM->sum, OUT);
 
-      for(r = 0 ; r < P->nrc ; ++r)
-        UpdateWeights    (RC[r], buf, sym);
+      #ifdef ESTIMATE
+      if(P->estim != 0)
+        fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym) / M_LN2);
+      #endif
+
+      CalcDecayment(WM, PM, sym);
+      for(r = 0 ; r < P->nCModels ; ++r)
+        UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
+      RenormalizeWeights(WM);
+      c = 0;
+      for(r = 0 ; r < P->nCModels ; ++r){
+        if(CM[r]->edits != 0)
+          UpdateTolerantModel(CM[r]->TM, PM[++c], sym);
+        ++c;
+        }
+
+      for(r = 0 ; r < P->nRModels ; ++r)
+        UpdateWeights(RC[r], buf, sym);
 
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
@@ -255,20 +302,21 @@ void Decompress(char *fn){
   uint32_t   m, n, r;
   uint8_t    *buf   = (uint8_t *)    Calloc(mSize,    sizeof(uint8_t)),
              *cache = (uint8_t *)    Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
-  RCLASS     **RC   = (RCLASS **)    Malloc(1 *       sizeof(RCLASS *));
-  Parameters *P     = (Parameters *) Malloc(1 *       sizeof(Parameters));
-  PMODEL     *MX    =  CreatePModel(NSYM);
+  RCLASS     **RC   = (RCLASS **)    Calloc(1,        sizeof(RCLASS *));
+  CMODEL     **CM   = (CMODEL **)    Calloc(1,        sizeof(CMODEL *));
+  PARAM      *P     = (PARAM   *)    Calloc(1,        sizeof(PARAM));
+  PMODEL     *MX    = CreatePModel(NSYM);
 
   srand(0);
 
   startinputtingbits();
   start_decode(IN);
-  DecodeHeader(P, RC, IN);
+  DecodeHeader(P, RC, CM, IN);
 
   while(i < P->size){                         // NOT absolute size (CHAR SIZE)
     for(n = 0 ; n < NSYM ; ++n){
 
-      for(r = 0 ; r < P->nrc ; ++r){
+      for(r = 0 ; r < P->nRModels ; ++r){
         StopRM           (RC[r]);
         StartMultipleRMs (RC[r], cache+SCACHE-1);
         InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
@@ -279,11 +327,12 @@ void Decompress(char *fn){
       ++pos;
 
       sym = ArithDecodeSymbol(NSYM, (int *) MX->freqs, (int) MX->sum, IN);
+
       if(n == 0) buf[i] = sym<<6 ; else buf[i] |= (sym<<((3-n)<<1));
       fputc(N2S(sym), OUT);
 
-      for(r = 0 ; r < P->nrc ; ++r)
-        UpdateWeights    (RC[r], buf, sym);
+      for(r = 0 ; r < P->nRModels ; ++r)
+        UpdateWeights(RC[r], buf, sym);
 
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
       }
@@ -311,10 +360,10 @@ void Decompress(char *fn){
 int main(int argc, char **argv){
   char       **p = *&argv, **xargv, *xpl = NULL;
   int32_t    n, k, xargc = 0;
-  Parameters *P;
+  PARAM      *P;
   clock_t    stop = 0, start = clock();
   
-  P = (Parameters *) Malloc(1 * sizeof(Parameters));
+  P = (PARAM *) Calloc(1, sizeof(PARAM));
 
   if((P->help = ArgState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
     PrintMenu();
@@ -336,10 +385,16 @@ int main(int argc, char **argv){
   P->estim   = ArgState  (0,               p, argc, "-e" );
   P->level   = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
 
-  P->nModels = 0;
-  for(n = 1 ; n < argc ; ++n)
-    if(strcmp(argv[n], "-cm") == 0 || strcmp(argv[n], "-rm") == 0)
-      P->nModels += 1;
+  for(n = 1 ; n < argc ; ++n){
+    if(strcmp(argv[n], "-cm") == 0){
+      P->nCModels++;
+      P->nModels++;
+      }
+    if(strcmp(argv[n], "-rm") == 0){
+      P->nRModels++;
+      P->nModels++;
+      }
+    }
 
   if(P->nModels == 0 && P->level == 0)
     P->level = DEFAULT_LEVEL;
@@ -347,9 +402,16 @@ int main(int argc, char **argv){
   if(P->level != 0){
     xpl = GetLevels(P->level);
     xargc = StrToArgv(xpl, &xargv);
-    for(n = 1 ; n < xargc ; ++n)
-      if(strcmp(xargv[n], "-cm") == 0 || strcmp(xargv[n], "-rm") == 0)
-        P->nModels += 1;
+    for(n = 1 ; n < xargc ; ++n){
+      if(strcmp(xargv[n], "-cm") == 0){
+        P->nCModels++;
+        P->nModels++;
+        }
+      if(strcmp(xargv[n], "-rm") == 0){
+        P->nRModels++;
+        P->nModels++;
+        }
+      }
     }
 
   if(P->nModels == 0 && !P->mode){
@@ -357,26 +419,25 @@ int main(int argc, char **argv){
     return 1;
     }
 
-  P->model = (ModelPar *) Calloc(P->nModels, sizeof(ModelPar));
-
+  P->rmodel = (RModelPar *) Calloc(P->nRModels, sizeof(RModelPar));
   k = 0;
   for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-rm") == 0)
-      P->model[k++] = ArgsUniqRModel(argv[n+1], 0);
+      P->rmodel[k++] = ArgsUniqRModel(argv[n+1], 0);
   if(P->level != 0){
     for(n = 1 ; n < xargc ; ++n)
       if(strcmp(xargv[n], "-rm") == 0)
-        P->model[k++] = ArgsUniqRModel(xargv[n+1], 0);
+        P->rmodel[k++] = ArgsUniqRModel(xargv[n+1], 0);
     }
-  P->nrc = k;
 
+  P->cmodel = (CModelPar *) Calloc(P->nCModels, sizeof(CModelPar));
   for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-cm") == 0)
-      P->model[k++] = ArgsUniqCModel(argv[n+1], 0);
+      P->cmodel[k++] = ArgsUniqCModel(argv[n+1], 0);
   if(P->level != 0){
     for(n = 1 ; n < xargc ; ++n)
       if(strcmp(xargv[n], "-cm") == 0)
-        P->model[k++] = ArgsUniqCModel(xargv[n+1], 0);
+        P->cmodel[k++] = ArgsUniqCModel(xargv[n+1], 0);
     }
 
   P->nTar = ReadFNames(P, argv[argc-1]);

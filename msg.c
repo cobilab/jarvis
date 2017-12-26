@@ -51,7 +51,7 @@ void PrintMenu(void){
   "  -l <level>             level of compression [1;3],                   \n");
   #ifdef ESTIMATE
   fprintf(stderr,
-  "  -e                     it creates a file with the extension \".iae\" \n"
+  "  -e                     it creates a file with the extension \".info\"\n"
   "                         with the respective information content.      \n");
   #endif
   ModelsExplanation();
