@@ -111,17 +111,19 @@ void EncodeHeader(Parameters *P, RCLASS **RC, FILE *F){
 // COMPRESSION
 //
 void Compress(Parameters *P, char *fn){
-  FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
-  uint64_t i = 0, mSize = MAX_BUF, pos = 0, r = 0;
-  uint32_t m, n; 
-  uint8_t  t[NSYM], *buf   = (uint8_t *) Calloc(mSize,    sizeof(uint8_t)), 
-           sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t));
-  RCLASS   **RC;
-  CModel   **CM;
-  PMODEL   **PM;
-  PMODEL   *MX;
-  FPMODEL  *PT;
-  CMWEIGHT *WM;
+  FILE      *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
+  uint64_t  i = 0, mSize = MAX_BUF, pos = 0, r = 0;
+  uint32_t  m, n, c; 
+  uint8_t   t[NSYM], *buf   = (uint8_t *) Calloc(mSize,    sizeof(uint8_t)), 
+            sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)),
+            *p;
+  RCLASS    **RC;
+  CModel    **CM;
+  PMODEL    **PM;
+  PMODEL    *MX;
+  FPMODEL   *PT;
+  CMWEIGHT  *WM;
+  CBUF      *SB;
 
   srand(0);
 
@@ -149,6 +151,7 @@ void Compress(Parameters *P, char *fn){
   MX      = CreatePModel(NSYM);
   PT      = CreateFloatPModel(NSYM);
   WM      = CreateWeightModel(totModels);
+  SB      = CreateCBuffer(BUFFER_SIZE, BGUARD);
 
   RC = (RCLASS **) Malloc(P->nrc * sizeof(RCLASS *));
   for(n = 0 ; n < P->nrc ; ++n)
@@ -181,7 +184,30 @@ void Compress(Parameters *P, char *fn){
     for(n = 0 ; n < m ; ++n){
       sym = S2N(t[n]);
 
-      for(r = 0 ; r < P->nrc ; ++r){
+      SB->buf[SB->idx] = sym;
+
+      c = 0;
+      p = &SB->buf[SB->idx-1];
+
+      for(r = 0 ; r < P->nModels ; ++r){             // FOR ALL CONTEXT MODELS
+        CModel *FCM = CM[r];
+        GetPModelIdx(p, FCM);
+        ComputePModel(FCM, PM[c], FCM->pModelIdx, FCM->alphaDen);
+        ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
+        if(FCM->edits != 0){
+          ++c;
+          FCM->TM->seq->buf[FCM->TM->seq->idx] = sym;
+          FCM->TM->idx = GetPModelIdxCorr(FCM->TM->seq->buf+
+          FCM->TM->seq->idx-1, FCM, FCM->TM->idx);
+          ComputePModel(FCM, PM[c], FCM->TM->idx, FCM->TM->den);
+          ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
+          }
+        ++c;
+        }
+
+      ComputeMXProbs(PT, MX, NSYM);
+      
+      for(r = 0 ; r < P->nrc ; ++r){                  // FOR ALL REPEAT MODELS
         StopRM           (RC[r]);
         StartMultipleRMs (RC[r], cache+SCACHE-1);
         InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
@@ -202,6 +228,7 @@ void Compress(Parameters *P, char *fn){
     if(++i == mSize)    // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
       buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
+    UpdateCBuffer(SB);
     Progress(P->size, i); 
     }
 
