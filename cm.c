@@ -12,7 +12,8 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 CMODEL *CreateCModel(uint32_t ctx, uint32_t aDen, uint8_t ref, uint32_t edits, 
-uint32_t eDen, uint32_t nSym, double gamma, double eGamma){
+uint32_t eDen, uint32_t nSym, double gamma, double eGamma, uint32_t ir, 
+uint32_t eIr){
   CMODEL    *M = (CMODEL *) Calloc(1, sizeof(CMODEL));
   uint64_t  prod = 1, *mult;
   uint32_t  n;
@@ -21,6 +22,7 @@ uint32_t eDen, uint32_t nSym, double gamma, double eGamma){
   mult           = (uint64_t *) Calloc(ctx, sizeof(uint64_t));
   M->nPModels    = (uint64_t) pow(M->nSym, ctx);
   M->ctx         = ctx;
+  M->ir          = ir;
   M->alphaDen    = aDen;
   M->edits       = edits;
   M->gamma       = gamma;
@@ -45,9 +47,8 @@ uint32_t eDen, uint32_t nSym, double gamma, double eGamma){
 
   M->multiplier = mult[M->ctx-1];
 
-  if(edits != 0){
-    M->TM = CreateTolerantModel(edits, eDen, M->ctx, nSym);
-    }
+  if(edits != 0)
+    M->TM = CreateTolerantModel(edits, eDen, M->ctx, nSym, eIr);
 
   Free(mult);
   return M;

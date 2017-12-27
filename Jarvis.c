@@ -60,13 +60,15 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     uint32_t c = ReadNBits(                       CTX_BITS, F);
     uint32_t a = ReadNBits(                 ALPHA_DEN_BITS, F);
     double   g = ReadNBits(                     GAMMA_BITS, F) / 65534.0;
+    uint32_t i = ReadNBits(                        IR_BITS, F);
     uint32_t e = ReadNBits(                     EDITS_BITS, F);
-    uint32_t d = 0, b = 0;
+    uint32_t d = 0, b = 0, y = 0;
     if(e != 0){
       b = ReadNBits(                          E_GAMMA_BITS, F) / 65534.0;
       d = ReadNBits(                            E_DEN_BITS, F);
+      y = ReadNBits(                               IR_BITS, F);
       }
-    CM[n] = CreateCModel(c, a, 1, e, d, NSYM, g, b);
+    CM[n] = CreateCModel(c, a, 1, e, d, NSYM, g, b, i, y);
     }
 
   #ifdef DEBUG
@@ -92,9 +94,9 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     printf("    ir        = %u\n", CM[n]->ir);
     printf("    edits     = %u\n", CM[n]->edits);
     if(CM[n]->edits != 0){
-      printf("    eGamma  = %g\n", CM[n]->eGamma);
-      printf("    eDen    = %u\n", CM[n]->TM->den);
-      printf("    eIr     = %u\n", CM[n]->TM->ir);
+      printf("      eGamma = %g\n", CM[n]->eGamma);
+      printf("      eDen   = %u\n", CM[n]->TM->den);
+      printf("      eIr    = %u\n", CM[n]->TM->ir);
       }
     }
   #endif
@@ -112,9 +114,9 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   WriteNBits(P->nRModels,                          NRMODELS_BITS, F);
   for(n = 0 ; n < P->nRModels ; ++n){
     WriteNBits(RC[n]->mRM,                      MAX_RMODELS_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->alpha*65534),     ALPHA_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->beta *65534),      BETA_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->gamma*65534),     GAMMA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->alpha * 65534),   ALPHA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->beta * 65534),     BETA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->gamma * 65534),   GAMMA_BITS, F);
     WriteNBits(RC[n]->P->limit,                       LIMIT_BITS, F);
     WriteNBits(RC[n]->P->ctx,                           CTX_BITS, F);
     WriteNBits(RC[n]->P->rev,                            IR_BITS, F);
@@ -125,10 +127,12 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     WriteNBits(CM[n]->ctx,                              CTX_BITS, F);
     WriteNBits(CM[n]->alphaDen,                   ALPHA_DEN_BITS, F);
     WriteNBits((int)(CM[n]->gamma * 65534),           GAMMA_BITS, F);
+    WriteNBits(CM[n]->ir,                                IR_BITS, F);
     WriteNBits(CM[n]->edits,                          EDITS_BITS, F);
     if(CM[n]->edits != 0){
       WriteNBits((int)(CM[n]->eGamma * 65534),      E_GAMMA_BITS, F);
       WriteNBits(CM[n]->TM->den,                      E_DEN_BITS, F);
+      WriteNBits(CM[n]->TM->ir,                          IR_BITS, F);
       }
     }
 
@@ -155,9 +159,9 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     printf("    ir        = %u\n", CM[n]->ir);
     printf("    edits     = %u\n", CM[n]->edits);
     if(CM[n]->edits != 0){
-      printf("    eGamma  = %g\n", CM[n]->eGamma);
-      printf("    eDen    = %u\n", CM[n]->TM->den);
-      printf("    eIr     = %u\n", CM[n]->TM->ir);
+      printf("      eGamma = %g\n", CM[n]->eGamma);
+      printf("      eDen   = %u\n", CM[n]->TM->den);
+      printf("      eIr    = %u\n", CM[n]->TM->ir);
       }
     }
 
@@ -173,7 +177,7 @@ void Compress(PARAM *P, char *fn){
   uint32_t  m, n, c; 
   uint8_t   t[NSYM], *buf   = (uint8_t *) Calloc(mSize,    sizeof(uint8_t)), 
             sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)),
-            *p;
+            *p, irSym;
   RCLASS    **RC;
   CMODEL    **CM;
   PMODEL    **PM;
@@ -224,7 +228,8 @@ void Compress(PARAM *P, char *fn){
   for(n = 0 ; n < P->nCModels ; ++n)
     CM[n] = CreateCModel(P->cmodel[n].ctx,   P->cmodel[n].den,  1, 
                          P->cmodel[n].edits, P->cmodel[n].eDen, NSYM, 
-                         P->cmodel[n].gamma, P->cmodel[n].eGamma);
+                         P->cmodel[n].gamma, P->cmodel[n].eGamma,
+                         P->cmodel[n].ir,    P->cmodel[n].eIr);
 
   P->length = NBytesInFile(IN);
   P->size   = P->length>>2;
@@ -247,26 +252,22 @@ void Compress(PARAM *P, char *fn){
 
       memset((void *)PT->freqs, 0, NSYM * sizeof(double));
       p = &SB->buf[SB->idx-1];
-      c = 0;
 
-/*
-      for(r = 0 ; r < P->nCModels ; ++r){            // FOR ALL CONTEXT MODELS
+      for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c){       // FOR ALL CMODELS
         CMODEL *FCM = CM[r];
         GetPModelIdx(p, FCM);
         ComputePModel(FCM, PM[c], FCM->pModelIdx, FCM->alphaDen);
-        ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
+        ComputeWeightedFreqs(WM->weight[c], PM[c], PT, NSYM);
         if(FCM->edits != 0){
-          ++c;
           FCM->TM->seq->buf[FCM->TM->seq->idx] = sym;
           FCM->TM->idx = GetPModelIdxCorr(FCM->TM->seq->buf+
           FCM->TM->seq->idx-1, FCM, FCM->TM->idx);
-          ComputePModel(FCM, PM[c], FCM->TM->idx, FCM->TM->den);
+          ComputePModel(FCM, PM[++c], FCM->TM->idx, FCM->TM->den);
           ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
           }
-        ++c;
         }
       ComputeMXProbs(PT, MX_CM, NSYM);
-*/      
+      
       for(r = 0 ; r < P->nRModels ; ++r){             // FOR ALL REPEAT MODELS
         StopRM           (RC[r]);
         StartMultipleRMs (RC[r], cache+SCACHE-1);
@@ -277,36 +278,37 @@ void Compress(PARAM *P, char *fn){
 
       ++pos;
 
-      AESym(sym, (int *)(MX_RM->freqs), (int) MX_RM->sum, OUT);
+      AESym(sym, (int *)(MX_CM->freqs), (int) MX_CM->sum, OUT);
 
       #ifdef ESTIMATE
       if(P->estim != 0)
         fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym) / M_LN2);
       #endif
 
-/*
       CalcDecayment(WM, PM, sym);
-      for(r = 0 ; r < P->nCModels ; ++r)
-        UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
-      RenormalizeWeights(WM);
-      c = 0;
       for(r = 0 ; r < P->nCModels ; ++r){
+        UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
+        if(CM[r]->ir != 0){                // REVERSE COMPLEMENTS
+          irSym = GetPModelIdxIR(SB->buf+SB->idx, CM[r]);
+          UpdateCModelCounter(CM[r], irSym, CM[r]->pModelIdxIR);
+          }
+        }
+      RenormalizeWeights(WM);
+
+      for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c)
         if(CM[r]->edits != 0)
           UpdateTolerantModel(CM[r]->TM, PM[++c], sym);
-        ++c;
-        }
-*/
 
       for(r = 0 ; r < P->nRModels ; ++r)
         UpdateWeights(RC[r], buf, sym);
 
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
+      UpdateCBuffer(SB);
       }
 
     if(++i == mSize)    // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
       buf = (uint8_t *) Realloc(buf, (mSize+=mSize) * sizeof(uint8_t));
 
-    UpdateCBuffer(SB);
     Progress(P->size, i); 
     }
 
@@ -480,6 +482,7 @@ int main(int argc, char **argv){
     }
 
   P->mode = ArgState (DEF_MODE,  p, argc, "-d"); // COMPRESS OR DECOMPRESS
+
   P->tar  = argv[argc-1];
  
   if(!P->mode){

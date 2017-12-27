@@ -21,7 +21,8 @@ TOLERANT;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-TOLERANT     *CreateTolerantModel     (uint32_t, uint32_t, uint32_t, uint32_t);
+TOLERANT     *CreateTolerantModel     (uint32_t, uint32_t, uint32_t, uint32_t,
+                                       uint32_t);
 int32_t      BestId                   (uint32_t *, uint32_t, uint32_t);
 void         UpdateTolerantModel      (TOLERANT *, PMODEL *, uint8_t);
 void         Fail                     (TOLERANT *);

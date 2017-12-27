@@ -42,7 +42,8 @@ uint64_t        GetPModelIdxCorr     (uint8_t *, CMODEL *, uint64_t);
 void            ResetCModelIdx       (CMODEL *);
 void            UpdateCModelCounter  (CMODEL *, uint32_t, uint64_t);
 CMODEL          *CreateCModel        (uint32_t, uint32_t, uint8_t, uint32_t, 
-                                      uint32_t, uint32_t, double, double);
+                                      uint32_t, uint32_t, double, double,
+                                      uint32_t, uint32_t);
 void            ComputePModel        (CMODEL *, PMODEL *, uint64_t, uint32_t);
 void            RemoveCModel         (CMODEL *);
 double          PModelSymbolNats     (PMODEL *, uint32_t);

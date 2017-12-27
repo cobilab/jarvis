@@ -7,7 +7,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-TOLERANT *CreateTolerantModel(uint32_t e, uint32_t d, uint32_t c, uint32_t n){
+TOLERANT *CreateTolerantModel(uint32_t e, uint32_t d, uint32_t c, uint32_t n,
+uint32_t i){
  
   TOLERANT *T  = (TOLERANT *) Calloc(1, sizeof(TOLERANT));
 
@@ -19,6 +20,7 @@ TOLERANT *CreateTolerantModel(uint32_t e, uint32_t d, uint32_t c, uint32_t n){
   T->ctx       = c;
   T->nSym      = n;
   T->den       = d;
+  T->ir        = i;
 
   return T;
   }
