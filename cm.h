@@ -30,6 +30,7 @@ typedef struct{
   uint64_t   pModelIdxIR;   // IDX INVERSIONS
   uint32_t   edits;         // EDITS
   uint32_t   nSym;          // EDITS
+  uint32_t   ir;            // INVERTED REPEATS
   }
 CMODEL;
 

@@ -3,7 +3,6 @@
 
 #include "defs.h"
 
-#define MX_PMODEL      65535
 #define DEFAULT_GAMMA  0.90
 
 typedef struct{

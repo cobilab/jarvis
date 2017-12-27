@@ -15,6 +15,7 @@ typedef struct{
   uint32_t   ctx;            // ORDER OF CONTEXT MODEL
   uint32_t   nSym;           // NUMBER OF SYMBOLS
   uint32_t   den;            // ALPHA DENOMINATOR FOR THIS MODEL
+  uint32_t   ir;             // INVERTED REPEATS
   }
 TOLERANT;
 

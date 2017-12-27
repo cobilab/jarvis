@@ -131,26 +131,6 @@ RModelPar ArgsUniqRModel(char *str, uint8_t type){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint32_t ReadFNames(PARAM *P, char *arg){
-  uint32_t nFiles = 1, k = 0, argLen;
-  
-  argLen = strlen(arg);
-  for( ; k != argLen ; ++k)
-    if(arg[k] == ':')
-      ++nFiles;
-  P->tar = (char **) Malloc(nFiles * sizeof(char *));
-  P->tar[0] = strtok(arg, ":");
-  TestReadFile(P->tar[0]);
-  for(k = 1 ; k != nFiles ; ++k){
-    P->tar[k] = strtok(NULL, ":");
-    TestReadFile(P->tar[k]);
-    }
-
-  return nFiles;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 void PrintArgs(PARAM *P){
   uint32_t n = 0;
 
@@ -202,10 +182,7 @@ void PrintArgs(PARAM *P){
     P->rmodel[n].ir == 1 ? "yes" : "no");
     }
 
-  fprintf(stderr, "Target files (%u):\n", P->nTar);
-  for(n = 0 ; n < P->nTar ; ++n)
-    fprintf(stderr, "  [+] Filename %-2u .................. %s\n", n + 1, 
-    P->tar[n]);
+  fprintf(stderr, "Target file ........................ %s\n", P->tar); 
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

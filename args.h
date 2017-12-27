@@ -12,7 +12,6 @@ RModelPar   ArgsUniqRModel  (char *, uint8_t);
 double      ArgDouble       (double, char *[], uint32_t, char *);
 uint8_t     ArgState        (uint8_t  , char *[], uint32_t, char *);
 char        *ArgString      (char    *, char *[], uint32_t, char *);
-uint32_t    ReadFNames      (PARAM *, char *);
 void        PrintArgs       (PARAM *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

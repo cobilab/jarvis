@@ -52,7 +52,7 @@ typedef struct{
   uint32_t  nRModels;
   CModelPar *cmodel;
   RModelPar *rmodel;
-  char      **tar;
+  char      *tar;
   uint8_t   nTar;
   uint32_t  watermark;
   uint64_t  length;
@@ -84,7 +84,7 @@ uint32_t garbage;
 #define MIN_DEN                1
 #define BGUARD                 32
 #define DEFAULT_MAX_COUNT      ((1 << (sizeof(ACC) * 8)) - 1)
-#define MX_PMODEL              65535
+#define MX_PMODEL              65534
 #define ALPHABET_SIZE          4
 #define CHECKSUMGF             1073741824
 #define WATERMARK              16042014
@@ -93,6 +93,22 @@ uint32_t garbage;
 #define MAX_STR                2048
 #define REFERENCE              1
 #define TARGET                 0
+
+#define SIZE_BITS              46
+#define LENGTH_BITS            46
+#define NCMODELS_BITS          16
+#define CTX_BITS               16
+#define ALPHA_DEN_BITS         16
+#define EDITS_BITS             8
+#define E_GAMMA_BITS           8
+#define E_DEN_BITS             16
+#define IR_BITS                1
+#define NRMODELS_BITS          16
+#define MAX_RMODELS_BITS       16
+#define LIMIT_BITS             8
+#define ALPHA_BITS             16
+#define BETA_BITS              16
+#define GAMMA_BITS             16
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
