@@ -384,7 +384,6 @@ void Decompress(char *fn){
         ComputePModel(FCM, PM[c], FCM->pModelIdx, FCM->alphaDen);
         ComputeWeightedFreqs(WM->weight[c], PM[c], PT, NSYM);
         if(FCM->edits != 0){
-          FCM->TM->seq->buf[FCM->TM->seq->idx] = sym;
           FCM->TM->idx = GetPModelIdxCorr(FCM->TM->seq->buf+
           FCM->TM->seq->idx-1, FCM, FCM->TM->idx);
           ComputePModel(FCM, PM[++c], FCM->TM->idx, FCM->TM->den);
@@ -408,6 +407,10 @@ void Decompress(char *fn){
 
       if(n == 0) buf[i] = sym<<6 ; else buf[i] |= (sym<<((3-n)<<1));
       fputc(N2S(sym), OUT);
+
+      for(r = 0 ; r < P->nCModels ; ++r)
+        if(CM[r]->edits != 0)
+          CM[r]->TM->seq->buf[CM[r]->TM->seq->idx] = sym;
 
       CalcDecayment(WM, PM, sym);
       for(r = 0 ; r < P->nCModels ; ++r){
