@@ -70,6 +70,7 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
       }
     CM[n] = CreateCModel(c, a, 1, e, d, NSYM, g, b, i, y);
     }
+  P->nCPModels = ReadNBits(                  NCMODELS_BITS, F);
 
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
@@ -135,6 +136,7 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
       WriteNBits(CM[n]->TM->ir,                          IR_BITS, F);
       }
     }
+  WriteNBits(P->nCPModels,                         NCMODELS_BITS, F);
 
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
@@ -337,15 +339,22 @@ void Compress(PARAM *P, char *fn){
 // DECOMPRESSION
 //
 void Decompress(char *fn){
-  FILE       *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jd"), "w");
-  uint64_t   i = 0, mSize = MAX_BUF, pos = 0;
-  uint32_t   m, n, r;
-  uint8_t    *buf   = (uint8_t *)    Calloc(mSize,    sizeof(uint8_t)),
-             *cache = (uint8_t *)    Calloc(SCACHE+1, sizeof(uint8_t)), sym = 0;
-  RCLASS     **RC   = (RCLASS **)    Calloc(1,        sizeof(RCLASS *));
-  CMODEL     **CM   = (CMODEL **)    Calloc(1,        sizeof(CMODEL *));
-  PARAM      *P     = (PARAM   *)    Calloc(1,        sizeof(PARAM));
-  PMODEL     *MX    = CreatePModel(NSYM);
+  FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jd"), "w");
+  uint64_t i = 0, mSize = MAX_BUF, pos = 0;
+  uint32_t m, n, r, c;
+  uint8_t  *buf   = (uint8_t *)    Calloc(mSize,    sizeof(uint8_t)),
+           *cache = (uint8_t *)    Calloc(SCACHE+1, sizeof(uint8_t)), 
+           sym = 0, *p, irSym;
+  RCLASS   **RC   = (RCLASS **)    Calloc(1,        sizeof(RCLASS *));
+  CMODEL   **CM   = (CMODEL **)    Calloc(1,        sizeof(CMODEL *));
+  PARAM    *P     = (PARAM   *)    Calloc(1,        sizeof(PARAM));
+  PMODEL   *MX;
+  PMODEL   **PM;
+  PMODEL   *MX_CM;
+  PMODEL   *MX_RM;
+  FPMODEL  *PT;
+  CMWEIGHT *WM;
+  CBUF     *SB;
 
   srand(0);
 
@@ -353,28 +362,72 @@ void Decompress(char *fn){
   start_decode(IN);
   DecodeHeader(P, RC, CM, IN);
 
+  PM      = (PMODEL  **) Calloc(P->nCPModels, sizeof(PMODEL *));
+  for(n = 0 ; n < P->nCPModels ; ++n)
+    PM[n] = CreatePModel(NSYM);
+  MX      = CreatePModel(NSYM);
+  MX_RM   = CreatePModel(NSYM);
+  MX_CM   = CreatePModel(NSYM);
+  PT      = CreateFloatPModel(NSYM);
+  WM      = CreateWeightModel(P->nCPModels);
+  SB      = CreateCBuffer(BUFFER_SIZE, BGUARD);
+
   while(i < P->size){                         // NOT absolute size (CHAR SIZE)
     for(n = 0 ; n < NSYM ; ++n){
+
+      memset((void *)PT->freqs, 0, NSYM * sizeof(double));
+      p = &SB->buf[SB->idx-1];
+
+      for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c){       // FOR ALL CMODELS
+        CMODEL *FCM = CM[r];
+        GetPModelIdx(p, FCM);
+        ComputePModel(FCM, PM[c], FCM->pModelIdx, FCM->alphaDen);
+        ComputeWeightedFreqs(WM->weight[c], PM[c], PT, NSYM);
+        if(FCM->edits != 0){
+          FCM->TM->seq->buf[FCM->TM->seq->idx] = sym;
+          FCM->TM->idx = GetPModelIdxCorr(FCM->TM->seq->buf+
+          FCM->TM->seq->idx-1, FCM, FCM->TM->idx);
+          ComputePModel(FCM, PM[++c], FCM->TM->idx, FCM->TM->den);
+          ComputeWeightedFreqs(WM->weight[c], PM[c], PT, FCM->nSym);
+          }
+        }
+      ComputeMXProbs(PT, MX_CM, NSYM);
 
       for(r = 0 ; r < P->nRModels ; ++r){
         StopRM           (RC[r]);
         StartMultipleRMs (RC[r], cache+SCACHE-1);
         InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
         RenormWeights    (RC[r]);
-        ComputeMixture   (RC[r], MX, buf);
+        ComputeMixture   (RC[r], MX_RM, buf);
         }
 
       ++pos;
 
-      sym = ArithDecodeSymbol(NSYM, (int *) MX->freqs, (int) MX->sum, IN);
+      sym = ArithDecodeSymbol(NSYM, (int *) MX_CM->freqs, (int) MX_CM->sum, IN);
+      SB->buf[SB->idx] = sym;
 
       if(n == 0) buf[i] = sym<<6 ; else buf[i] |= (sym<<((3-n)<<1));
       fputc(N2S(sym), OUT);
+
+      CalcDecayment(WM, PM, sym);
+      for(r = 0 ; r < P->nCModels ; ++r){
+        UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
+        if(CM[r]->ir != 0){                // REVERSE COMPLEMENTS
+          irSym = GetPModelIdxIR(SB->buf+SB->idx, CM[r]);
+          UpdateCModelCounter(CM[r], irSym, CM[r]->pModelIdxIR);
+          }
+        }
+      RenormalizeWeights(WM);
+
+      for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c)
+        if(CM[r]->edits != 0)
+          UpdateTolerantModel(CM[r]->TM, PM[++c], sym);
 
       for(r = 0 ; r < P->nRModels ; ++r)
         UpdateWeights(RC[r], buf, sym);
 
       ShiftRBuf(cache, SCACHE, sym);  // STORE THE LAST SCACHE BASES & SHIFT 1
+      UpdateCBuffer(SB);
       }
 
     if(++i == mSize) // REALLOC BUFFER ON OVERFLOW 4 STORE THE COMPLETE SEQ
