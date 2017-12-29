@@ -227,11 +227,16 @@ void Compress(PARAM *P, char *fn){
                      P->rmodel[n].ir);
 
   CM = (CMODEL **) Malloc(P->nCModels * sizeof(CMODEL *));
-  for(n = 0 ; n < P->nCModels ; ++n)
+  for(n = 0, r = 0; n < P->nCModels ; ++n){
     CM[n] = CreateCModel(P->cmodel[n].ctx,   P->cmodel[n].den,  1, 
                          P->cmodel[n].edits, P->cmodel[n].eDen, NSYM, 
                          P->cmodel[n].gamma, P->cmodel[n].eGamma,
                          P->cmodel[n].ir,    P->cmodel[n].eIr);
+    // GIVE SPECIFIC GAMMA TO EACH MODEL:
+    WM->gamma[r++] = CM[n]->gamma;
+    if(CM[n]->edits != 0)
+      WM->gamma[r++] = CM[n]->eGamma;
+    }
 
   P->length = NBytesInFile(IN);
   P->size   = P->length>>2;
@@ -279,8 +284,29 @@ void Compress(PARAM *P, char *fn){
         }
 
       ++pos;
+/*
+//-------------------------
+      for(s = 0 ; s < N_SYMBOLS ; s++){
+        floatPModel->freqs[s] += (double)pModels[cModel]->freqs[s] /
+        pModels[cModel]->sum * cModels[cModel]->weight;
+        }
 
-      AESym(sym, (int *)(MX_CM->freqs), (int) MX_CM->sum, OUT);
+      for(rClass = 0 ; rClass < nRClasses ; rClass++){
+        for(rModel = 0 ; rModel < rClasses[rClass]->nRModels ; rModel++){
+          ComputeRModelProbs(&rClasses[rClass]->rModels[rModel], seq.bases);
+          // The probabilities estimated by each rModel are weighted
+          //according to the set of current weights.
+          for(s = 0 ; s < N_SYMBOLS ; s++)
+            floatPModel->freqs[s] += rClasses[rClass]->rModels[rModel].probs[s] *
+            rClasses[rClass]->rModels[rModel].weight;
+          }
+        }
+//-------------------------*/
+
+      if(RC[0]->nRM < 3)
+        AESym(sym, (int *) (MX_CM->freqs), (int) MX_CM->sum, OUT);
+      else
+        AESym(sym, (int *) (MX_RM->freqs), (int) MX_RM->sum, OUT);
 
       #ifdef ESTIMATE
       if(P->estim != 0)
@@ -371,6 +397,13 @@ void Decompress(char *fn){
   PT      = CreateFloatPModel(NSYM);
   WM      = CreateWeightModel(P->nCPModels);
   SB      = CreateCBuffer(BUFFER_SIZE, BGUARD);
+
+  // GIVE SPECIFIC GAMMA TO EACH MODEL:
+  for(n = 0, r = 0 ; n < P->nCModels ; ++n){
+    WM->gamma[r++] = CM[n]->gamma;
+    if(CM[n]->edits != 0)
+      WM->gamma[r++] = CM[n]->eGamma;
+    }
 
   while(i < P->size){                         // NOT absolute size (CHAR SIZE)
     for(n = 0 ; n < NSYM ; ++n){
