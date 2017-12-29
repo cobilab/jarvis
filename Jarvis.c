@@ -39,22 +39,8 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
 
   P->size     = ReadNBits(                       SIZE_BITS, F);
   P->length   = ReadNBits(                     LENGTH_BITS, F);
-  P->nRModels = ReadNBits(                   NRMODELS_BITS, F);
- 
-  RC = (RCLASS **) Realloc(RC, P->nRModels * sizeof(RCLASS *));
-  for(n = 0 ; n < P->nRModels ; ++n){ 
-    uint32_t  m = ReadNBits(              MAX_RMODELS_BITS, F);
-    double    a = ReadNBits(                    ALPHA_BITS, F) / 65534.0;
-    double    b = ReadNBits(                     BETA_BITS, F) / 65534.0;
-    double    g = ReadNBits(                    GAMMA_BITS, F) / 65534.0;
-    uint32_t  l = ReadNBits(                    LIMIT_BITS, F);
-    uint32_t  c = ReadNBits(                      CTX_BITS, F);
-    uint8_t   r = ReadNBits(                       IR_BITS, F);
-    RC[n] = CreateRC(m, a, b, l, c, g, r);
-    }
 
   P->nCModels = ReadNBits(                   NCMODELS_BITS, F);
-
   CM = (CMODEL **) Realloc(CM, P->nCModels * sizeof(CMODEL *));
   for(n = 0 ; n < P->nCModels ; ++n){
     uint32_t c = ReadNBits(                       CTX_BITS, F);
@@ -72,20 +58,22 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     }
   P->nCPModels = ReadNBits(                  NCMODELS_BITS, F);
 
+  P->nRModels = ReadNBits(                   NRMODELS_BITS, F);
+  RC = (RCLASS **) Realloc(RC, P->nRModels * sizeof(RCLASS *));
+  for(n = 0 ; n < P->nRModels ; ++n){ 
+    uint32_t  m = ReadNBits(              MAX_RMODELS_BITS, F);
+    double    a = ReadNBits(                    ALPHA_BITS, F) / 65534.0;
+    double    b = ReadNBits(                     BETA_BITS, F) / 65534.0;
+    double    g = ReadNBits(                    GAMMA_BITS, F) / 65534.0;
+    uint32_t  l = ReadNBits(                    LIMIT_BITS, F);
+    uint32_t  c = ReadNBits(                      CTX_BITS, F);
+    uint8_t   r = ReadNBits(                       IR_BITS, F);
+    RC[n] = CreateRC(m, a, b, l, c, g, r);
+    }
+
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
-  printf("n class = %u\n",        P->nRModels);
-  for(n = 0 ; n < P->nRModels ; ++n){
-    printf("  class %u\n",        n + 1);
-    printf("    max rep = %u\n",  RC[n]->mRM);
-    printf("    alpha   = %g\n",  RC[n]->P->alpha);
-    printf("    beta    = %g\n",  RC[n]->P->beta);
-    printf("    gamma   = %g\n",  RC[n]->P->gamma);
-    printf("    limit   = %u\n",  RC[n]->P->limit);
-    printf("    ctx     = %u\n",  RC[n]->P->ctx);
-    printf("    ir      = %u\n",  RC[n]->P->rev);
-    }
   printf("n CMs   = %u\n",        P->nRModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
@@ -100,6 +88,17 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
       printf("      eIr    = %u\n", CM[n]->TM->ir);
       }
     }
+  printf("n class = %u\n",        P->nRModels);
+  for(n = 0 ; n < P->nRModels ; ++n){
+    printf("  class %u\n",        n + 1);
+    printf("    max rep = %u\n",  RC[n]->mRM);
+    printf("    alpha   = %g\n",  RC[n]->P->alpha);
+    printf("    beta    = %g\n",  RC[n]->P->beta);
+    printf("    gamma   = %g\n",  RC[n]->P->gamma);
+    printf("    limit   = %u\n",  RC[n]->P->limit);
+    printf("    ctx     = %u\n",  RC[n]->P->ctx);
+    printf("    ir      = %u\n",  RC[n]->P->rev);
+    }
   #endif
   }
 
@@ -111,17 +110,6 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
 
   WriteNBits(P->size,                                  SIZE_BITS, F);
   WriteNBits(P->length,                              LENGTH_BITS, F);
-
-  WriteNBits(P->nRModels,                          NRMODELS_BITS, F);
-  for(n = 0 ; n < P->nRModels ; ++n){
-    WriteNBits(RC[n]->mRM,                      MAX_RMODELS_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->alpha * 65534),   ALPHA_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->beta * 65534),     BETA_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->gamma * 65534),   GAMMA_BITS, F);
-    WriteNBits(RC[n]->P->limit,                       LIMIT_BITS, F);
-    WriteNBits(RC[n]->P->ctx,                           CTX_BITS, F);
-    WriteNBits(RC[n]->P->rev,                            IR_BITS, F);
-    }
 
   WriteNBits(P->nCModels,                          NCMODELS_BITS, F);
   for(n = 0 ; n < P->nCModels ; ++n){
@@ -138,20 +126,20 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     }
   WriteNBits(P->nCPModels,                         NCMODELS_BITS, F);
 
+  WriteNBits(P->nRModels,                          NRMODELS_BITS, F);
+  for(n = 0 ; n < P->nRModels ; ++n){
+    WriteNBits(RC[n]->mRM,                      MAX_RMODELS_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->alpha * 65534),   ALPHA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->beta * 65534),     BETA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->gamma * 65534),   GAMMA_BITS, F);
+    WriteNBits(RC[n]->P->limit,                       LIMIT_BITS, F);
+    WriteNBits(RC[n]->P->ctx,                           CTX_BITS, F);
+    WriteNBits(RC[n]->P->rev,                            IR_BITS, F);
+    }
+
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
-  printf("n class = %u\n",        P->nRModels);
-  for(n = 0 ; n < P->nRModels ; ++n){
-    printf("  class %u\n",        n);
-    printf("    max rep = %u\n",  RC[n]->mRM);
-    printf("    alpha   = %g\n",  RC[n]->P->alpha);
-    printf("    beta    = %g\n",  RC[n]->P->beta);
-    printf("    gamma   = %g\n",  RC[n]->P->gamma);
-    printf("    limit   = %u\n",  RC[n]->P->limit);
-    printf("    ctx     = %u\n",  RC[n]->P->ctx);
-    printf("    ir      = %u\n",  RC[n]->P->rev);
-    }
   printf("n CMs   = %u\n",        P->nRModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
@@ -166,7 +154,17 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
       printf("      eIr    = %u\n", CM[n]->TM->ir);
       }
     }
-
+  printf("n class = %u\n",        P->nRModels);
+  for(n = 0 ; n < P->nRModels ; ++n){
+    printf("  class %u\n",        n);
+    printf("    max rep = %u\n",  RC[n]->mRM);
+    printf("    alpha   = %g\n",  RC[n]->P->alpha);
+    printf("    beta    = %g\n",  RC[n]->P->beta);
+    printf("    gamma   = %g\n",  RC[n]->P->gamma);
+    printf("    limit   = %u\n",  RC[n]->P->limit);
+    printf("    ctx     = %u\n",  RC[n]->P->ctx);
+    printf("    ir      = %u\n",  RC[n]->P->rev);
+    }
   #endif
   }
 
@@ -220,16 +218,10 @@ void Compress(PARAM *P, char *fn){
   WM      = CreateWeightModel(P->nCPModels);
   SB      = CreateCBuffer(BUFFER_SIZE, BGUARD);
 
-  RC = (RCLASS **) Malloc(P->nRModels * sizeof(RCLASS *));
-  for(n = 0 ; n < P->nRModels ; ++n)
-    RC[n] = CreateRC(P->rmodel[n].nr,    P->rmodel[n].alpha, P->rmodel[n].beta,  
-                     P->rmodel[n].limit, P->rmodel[n].ctx,   P->rmodel[n].gamma,
-                     P->rmodel[n].ir);
-
   CM = (CMODEL **) Malloc(P->nCModels * sizeof(CMODEL *));
   for(n = 0, r = 0; n < P->nCModels ; ++n){
-    CM[n] = CreateCModel(P->cmodel[n].ctx,   P->cmodel[n].den,  1, 
-                         P->cmodel[n].edits, P->cmodel[n].eDen, NSYM, 
+    CM[n] = CreateCModel(P->cmodel[n].ctx,   P->cmodel[n].den,  1,
+                         P->cmodel[n].edits, P->cmodel[n].eDen, NSYM,
                          P->cmodel[n].gamma, P->cmodel[n].eGamma,
                          P->cmodel[n].ir,    P->cmodel[n].eIr);
     // GIVE SPECIFIC GAMMA TO EACH MODEL:
@@ -237,6 +229,12 @@ void Compress(PARAM *P, char *fn){
     if(CM[n]->edits != 0)
       WM->gamma[r++] = CM[n]->eGamma;
     }
+
+  RC = (RCLASS **) Malloc(P->nRModels * sizeof(RCLASS *));
+  for(n = 0 ; n < P->nRModels ; ++n)
+    RC[n] = CreateRC(P->rmodel[n].nr,    P->rmodel[n].alpha, P->rmodel[n].beta,  
+                     P->rmodel[n].limit, P->rmodel[n].ctx,   P->rmodel[n].gamma,
+                     P->rmodel[n].ir);
 
   P->length = NBytesInFile(IN);
   P->size   = P->length>>2;
