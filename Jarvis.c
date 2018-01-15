@@ -258,6 +258,14 @@ void Compress(PARAM *P, char *fn){
       memset((void *)PT->freqs, 0, NSYM * sizeof(double));
       p = &SB->buf[SB->idx-1];
 
+      for(r = 0 ; r < P->nRModels ; ++r){             // FOR ALL REPEAT MODELS
+        StopRM           (RC[r]);
+        StartMultipleRMs (RC[r], cache+SCACHE-1);
+        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
+        RenormWeights    (RC[r]);
+        ComputeMixture   (RC[r], MX_RM, buf);
+        }
+
       for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c){       // FOR ALL CMODELS
         CMODEL *FCM = CM[r];
         GetPModelIdx(p, FCM);
@@ -273,14 +281,6 @@ void Compress(PARAM *P, char *fn){
         }
       ComputeMXProbs(PT, MX_CM, NSYM);
       
-      for(r = 0 ; r < P->nRModels ; ++r){             // FOR ALL REPEAT MODELS
-        StopRM           (RC[r]);
-        StartMultipleRMs (RC[r], cache+SCACHE-1);
-        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
-        RenormWeights    (RC[r]);
-        ComputeMixture   (RC[r], MX_RM, buf);
-        }
-
       ++pos;
 /*
 //-------------------------
@@ -409,6 +409,14 @@ void Decompress(char *fn){
       memset((void *)PT->freqs, 0, NSYM * sizeof(double));
       p = &SB->buf[SB->idx-1];
 
+      for(r = 0 ; r < P->nRModels ; ++r){
+        StopRM           (RC[r]);
+        StartMultipleRMs (RC[r], cache+SCACHE-1);
+        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
+        RenormWeights    (RC[r]);
+        ComputeMixture   (RC[r], MX_RM, buf);
+        }
+
       for(r = 0, c = 0 ; r < P->nCModels ; ++r, ++c){       // FOR ALL CMODELS
         CMODEL *FCM = CM[r];
         GetPModelIdx(p, FCM);
@@ -422,14 +430,6 @@ void Decompress(char *fn){
           }
         }
       ComputeMXProbs(PT, MX_CM, NSYM);
-
-      for(r = 0 ; r < P->nRModels ; ++r){
-        StopRM           (RC[r]);
-        StartMultipleRMs (RC[r], cache+SCACHE-1);
-        InsertKmerPos    (RC[r], RC[r]->P->idx, pos);        // pos = (i<<2)+n
-        RenormWeights    (RC[r]);
-        ComputeMixture   (RC[r], MX_RM, buf);
-        }
 
       ++pos;
 
