@@ -188,6 +188,12 @@ void Compress(PARAM *P, char *fn){
   CMWEIGHT  *WM;
   CBUF      *SB;
 
+  //                              CTX ALPHA
+  CMODEL    *AM     = CreateCModel(14, 1, 1, 0, 0, 2, 0, 0, 0, 0);
+  CBUF      *AM_BUF = CreateCBuffer(BUFFER_SIZE, BGUARD);
+  PMODEL    *AM_PM  = CreatePModel(2);
+  // 
+
   srand(0);
 
   if(P->verbose)
@@ -283,34 +289,39 @@ void Compress(PARAM *P, char *fn){
       
       ++pos;
 /*
-//-------------------------
-      for(s = 0 ; s < N_SYMBOLS ; s++){
-        floatPModel->freqs[s] += (double)pModels[cModel]->freqs[s] /
-        pModels[cModel]->sum * cModels[cModel]->weight;
-        }
-
-      for(rClass = 0 ; rClass < nRClasses ; rClass++){
-        for(rModel = 0 ; rModel < rClasses[rClass]->nRModels ; rModel++){
-          ComputeRModelProbs(&rClasses[rClass]->rModels[rModel], seq.bases);
-          // The probabilities estimated by each rModel are weighted
-          //according to the set of current weights.
-          for(s = 0 ; s < N_SYMBOLS ; s++)
-            floatPModel->freqs[s] += rClasses[rClass]->rModels[rModel].probs[s] *
-            rClasses[rClass]->rModels[rModel].weight;
-          }
-        }
-//-------------------------*/
-
-      if(RC[0]->nRM < 3)
+      int best = 0;
+      if(PModelSymbolNats(MX_CM, sym) < PModelSymbolNats(MX_RM, sym))
+        best = 0;
+      else 
+        best = 1;
+      AM_BUF->buf[AM_BUF->idx] = best;
+      p = &AM_BUF->buf[AM_BUF->idx-1];
+      GetPModelIdx(p, AM);
+      ComputePModel(AM, AM_PM, AM->pModelIdx, AM->alphaDen);
+ 
+      if(AM_PM->freqs[0] > AM_PM->freqs[1])
         AESym(sym, (int *) (MX_CM->freqs), (int) MX_CM->sum, OUT);
       else
         AESym(sym, (int *) (MX_RM->freqs), (int) MX_RM->sum, OUT);
+*/
+
+    if(RC[0]->nRM < 3)
+        AESym(sym, (int *) (MX_CM->freqs), (int) MX_CM->sum, OUT);
+      else
+        AESym(sym, (int *) (MX_RM->freqs), (int) MX_RM->sum, OUT);
+
 
       #ifdef ESTIMATE
       if(P->estim != 0)
         fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym) / M_LN2);
       #endif
 
+/*
+/////////////////
+ UpdateCModelCounter(AM, best, AM->pModelIdx);
+ UpdateCBuffer(AM_BUF);
+////////////////
+*/
       CalcDecayment(WM, PM, sym);
       for(r = 0 ; r < P->nCModels ; ++r){
         UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
