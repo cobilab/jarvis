@@ -55,6 +55,7 @@ typedef struct{
   char      *tar;
   uint8_t   nTar;
   uint32_t  watermark;
+  uint32_t  selection;
   uint64_t  length;
   uint64_t  size;
   }
@@ -76,6 +77,7 @@ uint32_t garbage;
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
 #define DEFAULT_LEVEL          1
+#define DEFAULT_SELECTION      11
 #define MAX_LEVEL              15
 #define MIN_LEVEL              1
 #define MAX_CTX                20
@@ -96,11 +98,12 @@ uint32_t garbage;
 
 #define SIZE_BITS              46
 #define LENGTH_BITS            46
+#define SELECTION_BITS         16
 #define NCMODELS_BITS          16
 #define CTX_BITS               16
 #define ALPHA_DEN_BITS         16
 #define EDITS_BITS             8
-#define E_GAMMA_BITS           8
+#define E_GAMMA_BITS           16
 #define E_DEN_BITS             16
 #define IR_BITS                1
 #define NRMODELS_BITS          16

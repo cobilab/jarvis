@@ -48,6 +48,7 @@ void PrintMenu(void){
   "  -v                     verbose mode (more information),              \n"
   "  -V                     display version number,                       \n"
   "  -f                     force overwrite of the output,                \n"
+  "  -z <ctx>               class selection context size,                 \n"
   "  -l <level>             level of compression [1;3],                   \n");
   #ifdef ESTIMATE
   fprintf(stderr,
@@ -81,10 +82,10 @@ void PrintVersion(void){
   "                                                                       \n"
   "      Efficient compression and decompression of DNA sequences.        \n"
   "                                                                       \n"
-  "Copyright (C) 2014-2018 University of Aveiro. This is a Free software. \n"
+  "Copyright (C) 2014-2019 University of Aveiro. This is a Free software. \n"
   "You may redistribute copies of it under the terms of the GNU - General \n"
   "Public License v3 <http://www.gnu.org/licenses/gpl.html>. There is NOT \n"
-  "ANY WARRANTY, to the extent permitted by law. Developed and Written by \n"
+  "ANY WARRANTY, to the extent permitted by law. Developed and written by \n"
   "Diogo Pratas.\n\n", VERSION, RELEASE);
   }
 

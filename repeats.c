@@ -35,9 +35,9 @@ double g, uint8_t i){
   C->RM         = (RMODEL   *) Calloc(m,     sizeof(RMODEL  ));
   C->mRM        = m;
   C->P->rev     = i;
-  C->P->alpha   = ((int)(a*65535))/65535.0;
-  C->P->beta    = ((int)(b*65535))/65535.0;
-  C->P->gamma   = ((int)(g*65535))/65535.0;
+  C->P->alpha   = ((int)(a*65534))/65534.0;
+  C->P->beta    = ((int)(b*65534))/65534.0;
+  C->P->gamma   = ((int)(g*65534))/65534.0;
   C->P->limit   = l;
   C->P->ctx     = c;
   C->P->mult    = CalcMult(c);

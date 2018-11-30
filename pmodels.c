@@ -115,3 +115,9 @@ void ComputeWeightedFreqs(double w, PMODEL *P, FPMODEL *PT, uint32_t nSym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+double PModelNats(PMODEL *P, uint32_t s){
+  return log((double) P->sum / P->freqs[s]);
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+

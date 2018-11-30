@@ -38,7 +38,7 @@ void        ResetWeightModel     (CMWEIGHT *);
 void        RenormalizeWeights   (CMWEIGHT *);
 void        CalcDecayment        (CMWEIGHT *, PMODEL **, uint8_t);
 void        RemoveWeightModel    (CMWEIGHT *);
-double      PModelSymbolNats     (PMODEL *, uint32_t);
+double      PModelNats           (PMODEL *, uint32_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

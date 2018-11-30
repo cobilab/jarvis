@@ -46,7 +46,6 @@ CMODEL          *CreateCModel        (uint32_t, uint32_t, uint8_t, uint32_t,
                                       uint32_t, uint32_t);
 void            ComputePModel        (CMODEL *, PMODEL *, uint64_t, uint32_t);
 void            RemoveCModel         (CMODEL *);
-double          PModelSymbolNats     (PMODEL *, uint32_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

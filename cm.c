@@ -132,8 +132,3 @@ void RemoveCModel(CMODEL *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-double PModelSymbolNats(PMODEL *P, uint32_t s){
-  return log((double) P->sum / P->freqs[s]);
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

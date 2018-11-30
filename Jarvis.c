@@ -37,10 +37,10 @@
 void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   uint32_t n;
 
-  P->size     = ReadNBits(                       SIZE_BITS, F);
-  P->length   = ReadNBits(                     LENGTH_BITS, F);
-
-  P->nCModels = ReadNBits(                   NCMODELS_BITS, F);
+  P->size      = ReadNBits(                      SIZE_BITS, F);
+  P->length    = ReadNBits(                    LENGTH_BITS, F);
+  P->selection = ReadNBits(                 SELECTION_BITS, F);
+  P->nCModels  = ReadNBits(                  NCMODELS_BITS, F);
   CM = (CMODEL **) Realloc(CM, P->nCModels * sizeof(CMODEL *));
   for(n = 0 ; n < P->nCModels ; ++n){
     uint32_t c = ReadNBits(                       CTX_BITS, F);
@@ -74,6 +74,7 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
+  printf("Select  = %u\n",        P->selection);
   printf("n CMs   = %u\n",        P->nRModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
@@ -110,6 +111,7 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
 
   WriteNBits(P->size,                                  SIZE_BITS, F);
   WriteNBits(P->length,                              LENGTH_BITS, F);
+  WriteNBits(P->selection,                        SELECTION_BITS, F);
 
   WriteNBits(P->nCModels,                          NCMODELS_BITS, F);
   for(n = 0 ; n < P->nCModels ; ++n){
@@ -130,7 +132,7 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   for(n = 0 ; n < P->nRModels ; ++n){
     WriteNBits(RC[n]->mRM,                      MAX_RMODELS_BITS, F);
     WriteNBits((uint16_t)(RC[n]->P->alpha * 65534),   ALPHA_BITS, F);
-    WriteNBits((uint16_t)(RC[n]->P->beta * 65534),     BETA_BITS, F);
+    WriteNBits((uint16_t)(RC[n]->P->beta  * 65534),    BETA_BITS, F);
     WriteNBits((uint16_t)(RC[n]->P->gamma * 65534),   GAMMA_BITS, F);
     WriteNBits(RC[n]->P->limit,                       LIMIT_BITS, F);
     WriteNBits(RC[n]->P->ctx,                           CTX_BITS, F);
@@ -140,6 +142,7 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   #ifdef DEBUG
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
+  printf("select  = %u\n",        P->selection);
   printf("n CMs   = %u\n",        P->nRModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
@@ -174,25 +177,22 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
 void Compress(PARAM *P, char *fn){
   FILE      *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jc"), "w");
   uint64_t  i = 0, mSize = MAX_BUF, pos = 0, r = 0;
-  uint32_t  m, n, c; 
+  uint32_t  m, n, c, best;
   uint8_t   t[NSYM], *buf   = (uint8_t *) Calloc(mSize,    sizeof(uint8_t)), 
             sym = 0, *cache = (uint8_t *) Calloc(SCACHE+1, sizeof(uint8_t)),
             *p, irSym;
   RCLASS    **RC;
   CMODEL    **CM;
   PMODEL    **PM;
-  PMODEL    *MX;
   PMODEL    *MX_CM;
   PMODEL    *MX_RM;
   FPMODEL   *PT;
   CMWEIGHT  *WM;
   CBUF      *SB;
 
-  //                              CTX ALPHA
-  CMODEL    *AM     = CreateCModel(14, 1, 1, 0, 0, 2, 0, 0, 0, 0);
+  CMODEL    *AM     = CreateCModel(P->selection, 1, 1, 0, 0, 2, 0, 0, 0, 0);
   CBUF      *AM_BUF = CreateCBuffer(BUFFER_SIZE, BGUARD);
   PMODEL    *AM_PM  = CreatePModel(2);
-  // 
 
   srand(0);
 
@@ -217,7 +217,6 @@ void Compress(PARAM *P, char *fn){
   PM      = (PMODEL  **) Calloc(P->nCPModels, sizeof(PMODEL *));
   for(n = 0 ; n < P->nCPModels ; ++n)
     PM[n] = CreatePModel(NSYM);
-  MX      = CreatePModel(NSYM);
   MX_RM   = CreatePModel(NSYM);
   MX_CM   = CreatePModel(NSYM);
   PT      = CreateFloatPModel(NSYM);
@@ -288,40 +287,31 @@ void Compress(PARAM *P, char *fn){
       ComputeMXProbs(PT, MX_CM, NSYM);
       
       ++pos;
-/*
-      int best = 0;
-      if(PModelSymbolNats(MX_CM, sym) < PModelSymbolNats(MX_RM, sym))
-        best = 0;
-      else 
-        best = 1;
+
+      best = (PModelNats(MX_CM, sym) < PModelNats(MX_RM, sym)) ? 0 : 1;
       AM_BUF->buf[AM_BUF->idx] = best;
       p = &AM_BUF->buf[AM_BUF->idx-1];
       GetPModelIdx(p, AM);
       ComputePModel(AM, AM_PM, AM->pModelIdx, AM->alphaDen);
  
-      if(AM_PM->freqs[0] > AM_PM->freqs[1])
+      if(AM_PM->freqs[0] > AM_PM->freqs[1]){
         AESym(sym, (int *) (MX_CM->freqs), (int) MX_CM->sum, OUT);
-      else
+        #ifdef ESTIMATE
+        if(P->estim != 0)
+          fprintf(IAE, "%.3g\n", PModelNats(MX_CM, sym) / M_LN2);
+        #endif
+        }
+      else{
         AESym(sym, (int *) (MX_RM->freqs), (int) MX_RM->sum, OUT);
-*/
+        #ifdef ESTIMATE
+        if(P->estim != 0)
+          fprintf(IAE, "%.3g\n", PModelNats(MX_RM, sym) / M_LN2);
+        #endif
+        }
 
-    if(RC[0]->nRM < 3)
-        AESym(sym, (int *) (MX_CM->freqs), (int) MX_CM->sum, OUT);
-      else
-        AESym(sym, (int *) (MX_RM->freqs), (int) MX_RM->sum, OUT);
+      UpdateCModelCounter(AM, best, AM->pModelIdx);
+      UpdateCBuffer(AM_BUF);
 
-
-      #ifdef ESTIMATE
-      if(P->estim != 0)
-        fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym) / M_LN2);
-      #endif
-
-/*
-/////////////////
- UpdateCModelCounter(AM, best, AM->pModelIdx);
- UpdateCBuffer(AM_BUF);
-////////////////
-*/
       CalcDecayment(WM, PM, sym);
       for(r = 0 ; r < P->nCModels ; ++r){
         UpdateCModelCounter(CM[r], sym, CM[r]->pModelIdx);
@@ -376,14 +366,13 @@ void Compress(PARAM *P, char *fn){
 void Decompress(char *fn){
   FILE     *IN  = Fopen(fn, "r"), *OUT = Fopen(Cat(fn, ".jd"), "w");
   uint64_t i = 0, mSize = MAX_BUF, pos = 0;
-  uint32_t m, n, r, c;
+  uint32_t m, n, r, c, best;
   uint8_t  *buf   = (uint8_t *)    Calloc(mSize,    sizeof(uint8_t)),
            *cache = (uint8_t *)    Calloc(SCACHE+1, sizeof(uint8_t)), 
            sym = 0, *p, irSym;
   RCLASS   **RC   = (RCLASS **)    Calloc(1,        sizeof(RCLASS *));
   CMODEL   **CM   = (CMODEL **)    Calloc(1,        sizeof(CMODEL *));
   PARAM    *P     = (PARAM   *)    Calloc(1,        sizeof(PARAM));
-  PMODEL   *MX;
   PMODEL   **PM;
   PMODEL   *MX_CM;
   PMODEL   *MX_RM;
@@ -391,16 +380,21 @@ void Decompress(char *fn){
   CMWEIGHT *WM;
   CBUF     *SB;
 
+  CMODEL   *AM;
+  CBUF     *AM_BUF = CreateCBuffer(BUFFER_SIZE, BGUARD);
+  PMODEL   *AM_PM  = CreatePModel(2);
+
   srand(0);
 
   startinputtingbits();
   start_decode(IN);
   DecodeHeader(P, RC, CM, IN);
+  
+  AM      = CreateCModel(P->selection, 1, 1, 0, 0, 2, 0, 0, 0, 0);
 
   PM      = (PMODEL  **) Calloc(P->nCPModels, sizeof(PMODEL *));
   for(n = 0 ; n < P->nCPModels ; ++n)
     PM[n] = CreatePModel(NSYM);
-  MX      = CreatePModel(NSYM);
   MX_RM   = CreatePModel(NSYM);
   MX_CM   = CreatePModel(NSYM);
   PT      = CreateFloatPModel(NSYM);
@@ -444,7 +438,19 @@ void Decompress(char *fn){
 
       ++pos;
 
-      sym = ArithDecodeSymbol(NSYM, (int *) MX_CM->freqs, (int) MX_CM->sum, IN);
+      p = &AM_BUF->buf[AM_BUF->idx-1];
+      GetPModelIdx(p, AM);
+      ComputePModel(AM, AM_PM, AM->pModelIdx, AM->alphaDen);
+
+      sym = (AM_PM->freqs[0] > AM_PM->freqs[1]) ? 
+      ArithDecodeSymbol(NSYM, (int *) MX_CM->freqs, (int) MX_CM->sum, IN):
+      ArithDecodeSymbol(NSYM, (int *) MX_RM->freqs, (int) MX_RM->sum, IN);
+
+      best = (PModelNats(MX_CM, sym) < PModelNats(MX_RM, sym)) ? 0 : 1;
+      AM_BUF->buf[AM_BUF->idx] = best;
+
+      UpdateCModelCounter(AM, best, AM->pModelIdx);
+      UpdateCBuffer(AM_BUF);
       SB->buf[SB->idx] = sym;
 
       if(n == 0) buf[i] = sym<<6 ; else buf[i] |= (sym<<((3-n)<<1));
@@ -518,10 +524,11 @@ int main(int argc, char **argv){
     return EXIT_SUCCESS;
     }
 
-  P->verbose = ArgState  (DEFAULT_VERBOSE, p, argc, "-v" );
-  P->force   = ArgState  (DEFAULT_FORCE,   p, argc, "-f" );
-  P->estim   = ArgState  (0,               p, argc, "-e" );
-  P->level   = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
+  P->verbose   = ArgState  (DEFAULT_VERBOSE,    p, argc, "-v" );
+  P->force     = ArgState  (DEFAULT_FORCE,      p, argc, "-f" );
+  P->estim     = ArgState  (0,                  p, argc, "-e" );
+  P->selection = ArgNumber (DEFAULT_SELECTION,  p, argc, "-z", 1, 20);
+  P->level     = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
 
   for(n = 1 ; n < argc ; ++n){
     if(strcmp(argv[n], "-cm") == 0){
@@ -598,7 +605,7 @@ int main(int argc, char **argv){
     fprintf(stderr, "Spent %g seconds.\n", ((double)(stop-start)) / 
     CLOCKS_PER_SEC); 
 
-  fprintf(stderr, "Done!\n");
+  fprintf(stderr, "Done!                \n");  // SPACES ARE VALID!
   return 0;
   }
 
