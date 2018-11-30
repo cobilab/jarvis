@@ -48,7 +48,8 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
     double   g = ReadNBits(                     GAMMA_BITS, F) / 65534.0;
     uint32_t i = ReadNBits(                        IR_BITS, F);
     uint32_t e = ReadNBits(                     EDITS_BITS, F);
-    uint32_t d = 0, b = 0, y = 0;
+    uint32_t d = 0, y = 0;
+    double   b = 0;
     if(e != 0){
       b = ReadNBits(                          E_GAMMA_BITS, F) / 65534.0;
       d = ReadNBits(                            E_DEN_BITS, F);
@@ -75,7 +76,7 @@ void DecodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
   printf("Select  = %u\n",        P->selection);
-  printf("n CMs   = %u\n",        P->nRModels);
+  printf("n CMs   = %u\n",        P->nCModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
     printf("    ctx       = %u\n", CM[n]->ctx);
@@ -143,7 +144,7 @@ void EncodeHeader(PARAM *P, RCLASS **RC, CMODEL **CM, FILE *F){
   printf("size    = %"PRIu64"\n", P->size);
   printf("length  = %"PRIu64"\n", P->length);
   printf("select  = %u\n",        P->selection);
-  printf("n CMs   = %u\n",        P->nRModels);
+  printf("n CMs   = %u\n",        P->nCModels);
   for(n = 0 ; n < P->nCModels ; ++n){
     printf("  cmodel %u\n",        n + 1);
     printf("    ctx       = %u\n", CM[n]->ctx);
@@ -288,7 +289,7 @@ void Compress(PARAM *P, char *fn){
       
       ++pos;
 
-      best = (PModelNats(MX_CM, sym) < PModelNats(MX_RM, sym)) ? 0 : 1;
+      best = (PModelStat(MX_CM, sym) < PModelStat(MX_RM, sym)) ? 0 : 1;
       AM_BUF->buf[AM_BUF->idx] = best;
       p = &AM_BUF->buf[AM_BUF->idx-1];
       GetPModelIdx(p, AM);
@@ -446,7 +447,7 @@ void Decompress(char *fn){
       ArithDecodeSymbol(NSYM, (int *) MX_CM->freqs, (int) MX_CM->sum, IN):
       ArithDecodeSymbol(NSYM, (int *) MX_RM->freqs, (int) MX_RM->sum, IN);
 
-      best = (PModelNats(MX_CM, sym) < PModelNats(MX_RM, sym)) ? 0 : 1;
+      best = (PModelStat(MX_CM, sym) < PModelStat(MX_RM, sym)) ? 0 : 1;
       AM_BUF->buf[AM_BUF->idx] = best;
 
       UpdateCModelCounter(AM, best, AM->pModelIdx);

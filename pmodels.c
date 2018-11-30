@@ -121,3 +121,9 @@ double PModelNats(PMODEL *P, uint32_t s){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+double PModelStat(PMODEL *P, uint32_t s){
+  return (double) P->sum / P->freqs[s];
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+

@@ -138,6 +138,7 @@ void PrintArgs(PARAM *P){
   "no" : "yes"); 
   fprintf(stderr, "Force mode ......................... %s\n", !P->force ? 
   "no" : "yes");
+  fprintf(stderr, "Predictive class context order ..... %u\n", P->selection);  
 
   for(n = 0 ; n < P->nCModels ; ++n){
     fprintf(stderr, "Context model %d:\n", n+1);
