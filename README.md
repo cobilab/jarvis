@@ -1,6 +1,8 @@
 <p align="center"><img src="imgs/logo.png" 
 alt="JARVIS" width="300" border="0" /></p>
-<b>Extreme lossless compression of genomic sequences</b>. As a compression tool, JARVIS is able to provide additional compression gains over GeCo and GeCo2, however it uses substantially higher computational resources (RAM and processing time). JARVIS only affords reference-free compression.
+<p align="center"><b>Extreme lossless compression of genomic sequences</b></p>
+
+As a compression tool, JARVIS is able to provide additional compression gains over GeCo and GeCo2, however it uses substantially higher computational resources (RAM and processing time). JARVIS only affords reference-free compression.
 
 ## INSTALLATION ##
 
