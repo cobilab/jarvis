@@ -6,7 +6,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#define DEBUG 1
+//#define DEBUG 1
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED

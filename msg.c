@@ -68,7 +68,7 @@ void PrintMenu(void){
   "  [  Compression  ]      ./Jarvis -v -l 2 sequence.txt                 \n"
   "  [ Decompression ]      ./Jarvis -v -d sequence.txt.jc                \n"
   "                                                                       \n"
-  "Report issues to <{pratas,ap}@ua.pt>.                                  \n"
+  "Report issues to <{pratas,seyedmorteza,ap}@ua.pt>.                     \n"
   "                                                                       \n");
   }
 
@@ -86,7 +86,7 @@ void PrintVersion(void){
   "You may redistribute copies of it under the terms of the GNU - General \n"
   "Public License v3 <http://www.gnu.org/licenses/gpl.html>. There is NOT \n"
   "ANY WARRANTY, to the extent permitted by law. Developed and written by \n"
-  "Diogo Pratas.\n\n", VERSION, RELEASE);
+  "Diogo Pratas, Morteza Hosseini and Armando J. Pinho.\n\n", VERSION, RELEASE);
   }
 
 void MsgNoModels(void){
