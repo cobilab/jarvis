@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
-//                    J A R V I S   2 0 1 4 - 2 0 1 8                       //
+//                    J A R V I S   2 0 1 4 - 2 0 1 9                       //
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
@@ -127,6 +127,13 @@ void Compress(PARAM *P, char *fn){
 
   if(P->verbose)
     fprintf(stderr, "Analyzing data and creating models ...\n");
+ 
+
+  if(P->nCModels < 1 || P->nRModels < 1)
+    {
+    fprintf(stderr, "Error: At least one context and one repeat model must be set!\n");
+    exit(1);    
+    }
 
   #ifdef ESTIMATE
   FILE *IAE = NULL;
