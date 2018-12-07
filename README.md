@@ -5,7 +5,7 @@
 alt="JARVIS" width="300" border="0" /></p>
 <p align="center"><b>Extreme lossless compression of genomic sequences</b></p>
 
-As a compression tool, JARVIS is able to provide additional compression gains over GeCo [ https://github.com/pratas/geco ] and GeCo2 [ https://github.com/pratas/geco2 ], however it uses substantially higher computational resources (RAM and processing time). JARVIS only affords reference-free compression. The core of the JARVIS method is a competitive prediction between two different classes of models: repeat models and context models. The latter models can be either context models or substitutional tolerant context models. 
+As a compression tool, JARVIS is able to provide additional compression gains over GeCo [ https://github.com/pratas/geco ] and GeCo2 [ https://github.com/pratas/geco2 ], however it uses substantially higher computational resources (RAM and processing time). JARVIS only affords reference-free compression. The core of the JARVIS method is a competitive prediction between two different classes of models: weighted stochastic repeat models and weighted context models. The latter models can be either context models or substitutional tolerant context models. 
 
 ## INSTALLATION ##
 
