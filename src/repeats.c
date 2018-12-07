@@ -84,15 +84,16 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
   if((E = GetHEnt(C, i)) == NULL)
     return 0;
 
-  if(r == 0)
+  uint32_t idx = rand() % E->nPos;
+
+  if(r == 0) // REGULAR REPEAT
     #ifdef REPEATS_RANDOM
-    C->RM[m].pos = E->pos[ rand() % E->nPos ];
+    C->RM[m].pos = E->pos[ idx ];
     #else
     C->RM[m].pos = E->pos[ 0 ];
     #endif
-  else{
+  else{ // INVERTED REPEAT
     #ifdef REPEATS_RANDOM
-    int32_t idx = rand() % E->nPos;
     if(E->pos[ idx ] <= C->P->ctx+1) 
       return 0;
     C->RM[m].pos = E->pos[ idx ] - C->P->ctx - 1;
