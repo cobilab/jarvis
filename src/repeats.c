@@ -84,7 +84,11 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
   if((E = GetHEnt(C, i)) == NULL)
     return 0;
 
-  uint32_t idx = rand() % E->nPos;
+  uint32_t idx;
+  if(E->nPos > 0)
+    idx = rand() % E->nPos;
+  else
+    idx = 0;
 
   if(r == 0) // REGULAR REPEAT
     #ifdef REPEATS_RANDOM
