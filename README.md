@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/686ef07c0cae452a846ba5fdd0cc2132)](https://app.codacy.com/app/pratas/jarvis?utm_source=github.com&utm_medium=referral&utm_content=pratas/jarvis&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/pratas/jarvis.svg?branch=master)](https://travis-ci.org/pratas/jarvis)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 <p align="center"><img src="imgs/logo.png" 
