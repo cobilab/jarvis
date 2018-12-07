@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/pratas/jarvis.svg?branch=master)](https://travis-ci.org/pratas/jarvis)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 <p align="center"><img src="imgs/logo.png" 
 alt="JARVIS" width="300" border="0" /></p>
 <p align="center"><b>Extreme lossless compression of genomic sequences</b></p>
