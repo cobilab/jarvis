@@ -37,7 +37,7 @@ or
 </pre>
 
 This will print the following options:
-```bash
+```
 SYNOPSIS                                                               
       ./JARVIS [OPTION]... [FILE]                                      
                                                                        
