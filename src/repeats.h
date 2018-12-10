@@ -80,7 +80,6 @@ RCLASS;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint64_t  RFUNHASH           (uint64_t);
 void      ShiftRBuf          (uint8_t *, uint32_t, uint8_t);
 uint8_t   GetNBase           (uint8_t *, uint64_t);
 RCLASS    *CreateRC          (uint32_t, double, double, uint32_t, uint32_t, 
