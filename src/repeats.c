@@ -31,7 +31,7 @@ double g, uint8_t i){
   C->hash       = (RHASH    *) Calloc(1,     sizeof(RHASH   ));
   C->P          = (RPARAM   *) Calloc(1,     sizeof(RPARAM  ));
   C->hash->ent  = (RENTRY  **) Calloc(HSIZE, sizeof(RENTRY *));
-  C->hash->size = (uint16_t *) Calloc(HSIZE, sizeof(uint16_t));
+  C->hash->size = (uint32_t *) Calloc(HSIZE, sizeof(uint32_t));
   C->RM         = (RMODEL   *) Calloc(m,     sizeof(RMODEL  ));
   C->mRM        = m;
   C->P->rev     = i;
@@ -64,6 +64,7 @@ uint64_t GetIdx(uint8_t *p, RCLASS *C){
 // GET REPEAT MODEL RHASH RENTRY
 //
 RENTRY *GetHEnt(RCLASS *C, uint64_t key){
+
   uint32_t n, h = (uint32_t) (key % HSIZE);
   uint64_t b = (uint64_t) key & 0xfffffff0000;
 
@@ -122,6 +123,7 @@ int32_t StartRM(RCLASS *C, uint32_t m, uint64_t i, uint8_t r){
 // INSERT KMER POSITION INTO RHASH TABLE 
 //
 void InsertKmerPos(RCLASS *C, uint64_t key, uint32_t pos){
+
   uint32_t n, h = (uint32_t) key % HSIZE;
   uint64_t b = key & 0xfffffff0000;
  

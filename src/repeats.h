@@ -32,7 +32,7 @@ typedef struct{
 RENTRY;
 
 typedef struct{
-  uint16_t *size;    // NUMBER OF KEYS FOR EACH RENTRY
+  uint32_t *size;    // NUMBER OF KEYS FOR EACH RENTRY
   RENTRY   **ent;    // ENTRIES VECTORS POINTERS
   }
 RHASH;
@@ -80,6 +80,7 @@ RCLASS;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+uint64_t  RFUNHASH           (uint64_t);
 void      ShiftRBuf          (uint8_t *, uint32_t, uint8_t);
 uint8_t   GetNBase           (uint8_t *, uint64_t);
 RCLASS    *CreateRC          (uint32_t, double, double, uint32_t, uint32_t, 
