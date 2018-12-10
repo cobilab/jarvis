@@ -278,6 +278,7 @@ void Compress(PARAM *P, char *fn){
   for(n = 0 ; n < m ; ++n)
     WriteNBits(S2N(t[n]), 8, OUT);        // ENCODE REMAINING SYMBOLS
 
+  fprintf(stderr, "Done!                                               \n");
   fprintf(stderr, "Compression: %"PRIu64" -> %"PRIu64" ( %.6g )\n", P->length, 
   (uint64_t) _bytes_output, (double) _bytes_output * 8.0 / P->length);
 
@@ -608,7 +609,7 @@ int main(int argc, char **argv){
     fprintf(stderr, "Spent %g seconds.\n", ((double)(stop-start)) / 
     CLOCKS_PER_SEC); 
 
-  fprintf(stderr, "Done!                \n");  // SPACES ARE VALID!
+  fprintf(stderr, "Done!                        \n");  // SPACES ARE VALID!
   return 0;
   }
 
