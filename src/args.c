@@ -65,8 +65,8 @@ CModelPar ArgsUniqCModel(char *str, uint8_t type){
        gamma  >= 1.0     || gamma  < 0.0     || 
        eGamma >= 1.0     || eGamma < 0.0     ||
        edits  >  256     || eDen   > 50000   ||
-       ir     >  1       || ir     < 0       ||
-       eIr    >  1       || eIr    < 0){
+       ir     >  1       ||
+       eIr    >  1){
        FailModelScheme();
        exit(1);
        }
@@ -106,7 +106,7 @@ RModelPar ArgsUniqRModel(char *str, uint8_t type){
        beta   >= 1       || beta   <= 0       ||
        limit  >  21      || limit  <= 0       ||
        gamma  >= 1       || gamma  <= 0       ||
-       ir     >  1       || ir     <  0){
+       ir     >  1){
        FailModelScheme();
        exit(1);
        }
