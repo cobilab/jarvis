@@ -96,9 +96,9 @@ uint32_t garbage;
 
 #define SIZE_BITS              46
 #define LENGTH_BITS            46
-#define SELECTION_BITS         16
-#define NCMODELS_BITS          16
-#define CTX_BITS               16
+#define SELECTION_BITS         8
+#define NCMODELS_BITS          8
+#define CTX_BITS               8
 #define ALPHA_DEN_BITS         16
 #define EDITS_BITS             8
 #define E_GAMMA_BITS           16

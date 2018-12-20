@@ -531,7 +531,7 @@ int main(int argc, char **argv){
   P->verbose   = ArgState  (DEFAULT_VERBOSE,    p, argc, "-v" );
   P->force     = ArgState  (DEFAULT_FORCE,      p, argc, "-f" );
   P->estim     = ArgState  (0,                  p, argc, "-e" );
-  P->selection = ArgNumber (DEFAULT_SELECTION,  p, argc, "-z", 1, 20);
+  P->selection = ArgNumber (0,                  p, argc, "-z", 1, 20);
   P->level     = ArgNumber (0,   p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
 
   for(n = 1 ; n < argc ; ++n){
@@ -588,6 +588,13 @@ int main(int argc, char **argv){
     for(n = 1 ; n < xargc ; ++n)
       if(strcmp(xargv[n], "-cm") == 0)
         P->cmodel[k++] = ArgsUniqCModel(xargv[n+1], 0);
+    }
+
+  if(P->selection == 0){
+    P->selection = DEFAULT_SELECTION;
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-z") == 0)
+        P->selection = atoi(xargv[n+1]);
     }
 
   P->mode = ArgState (DEF_MODE,  p, argc, "-d"); // COMPRESS OR DECOMPRESS
