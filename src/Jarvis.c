@@ -116,12 +116,6 @@ void Compress(PARAM *P, char *fn){
   PMODEL    **PM;
   PMODEL    *MX_CM;
   PMODEL    *MX_RM;
-
-PMODEL    *MX_MX = CreatePModel(2);
-CMWEIGHT  *WM_MX = CreateWeightModel(2);
-WM_MX->gamma[0] = 0.9;
-WM_MX->gamma[1] = 0.9;
-
   FPMODEL   *PT;
   CMWEIGHT  *WM;
   CBUF      *SB;
