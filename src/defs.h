@@ -76,7 +76,7 @@ uint32_t garbage;
 #define DEFAULT_FORCE          0
 #define DEFAULT_LEVEL          1
 #define DEFAULT_SELECTION      12
-#define MAX_LEVEL              12
+#define MAX_LEVEL              15
 #define MIN_LEVEL              1
 #define MAX_CTX                20
 #define MIN_CTX                1
