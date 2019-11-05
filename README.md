@@ -176,7 +176,7 @@ If you are not interested in setting the template for each model, then use the l
 
 On using this software/method please cite:
 
-D. Pratas, A. J. Pinho, P. J. S. G. Ferreira. Efficient compression of genomic sequences. Proc. of the Data Compression Conference, DCC-2016, Snowbird, UT, p. 231-240, March 2016.
+Pratas D, Hosseini M, Silva JM, Pinho AJ. A Reference-Free Lossless Compression Algorithm for DNA Sequences Using a Competitive Prediction of Two Classes of Weighted Models. Entropy. 2019 Nov;21(11):1074.
 
 ## ISSUES ##
 
