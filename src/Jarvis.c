@@ -140,7 +140,7 @@ void Compress(PARAM *P, char *fn){
   FILE *IAE = NULL;
   char *IAEName = NULL;
   if(P->estim == 1){
-    IAEName = concatenate(P->tar[id], ".info");
+    IAEName = Cat(fn, ".info");
     IAE = Fopen(IAEName, "w");
     }
   #endif

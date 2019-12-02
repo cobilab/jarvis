@@ -135,6 +135,9 @@ void PrintMenu(void){
   "      -v,  --verbose                                                   \n"
   "           verbose mode (more information).                            \n"
   "                                                                       \n"
+  "      -e,  --estimation                                                \n"
+  "           creates [sequence].info with complexity profile.            \n"
+  "                                                                       \n"
   "      -s,  --show-levels                                               \n"
   "           show pre-computed compression levels (configured).          \n"
   "                                                                       \n",

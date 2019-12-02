@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 //#define DEBUG 1
+#define ESTIMATE 1
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED
