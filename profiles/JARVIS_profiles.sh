@@ -9,12 +9,14 @@
 # |                                                                            |
 # |                     FILE NEEDED TO THE COMPUTATION:                        |
 # |                                                                            |
-# |                     $1  >  FILE WITH THE GENOMES ID                        |
+# |                    $1: FILE WITH THE GENOME IN FASTA                       |
 # |                                                                            |
 # ==============================================================================
 #
 # ==============================================================================
 # ================================ DEFINITIONS =================================
+#
+LEVEL="5";
 #
 GET_GTO=0;
 GET_JARVIS=1;
@@ -50,8 +52,8 @@ if [[ "$RUN_COMPARISON" -eq "1" ]];
   WINDOW_SIZE=`echo "$LENGTH / 285" | bc`;
   echo "WINDOW SIZE: $WINDOW_SIZE";
   #
-  ./JARVIS -v -l 5 -e SEQ
-  ./JARVIS -v -l 5 -e SEQ_R
+  ./JARVIS -v -l $LEVEL -e SEQ
+  ./JARVIS -v -l $LEVEL -e SEQ_R
   #
   gto_upper_bound -u 2 < SEQ.iae   > SEQ_UB
   gto_upper_bound -u 2 < SEQ_R.iae > SEQ_R_UB
