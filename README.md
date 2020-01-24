@@ -12,9 +12,10 @@ As a compression tool, JARVIS is able to provide additional compression gains ov
 ## INSTALLATION ##
 
 ### Conda
-<pre>
+Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html), then run the following:
+```bash
 conda install -y -c bioconda jarvis
-</pre>
+```
 
 ### Unix
 <pre>
