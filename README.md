@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/cobilab/jarvis.svg?branch=master)](https://travis-ci.org/cobilab/jarvis)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/4fd7f444dc624bdcb7b83af0273dd329)](https://www.codacy.com/app/pratas/jarvis?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pratas/jarvis&amp;utm_campaign=Badge_Grade)
 ![Conda](https://img.shields.io/conda/dn/bioconda/jarvis)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 
